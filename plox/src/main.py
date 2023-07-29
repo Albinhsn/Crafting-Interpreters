@@ -1,14 +1,16 @@
 import sys
 from typing import Optional
-from token import Token
+from _token import Token
+from log import get_logger
 
 from scanner import Scanner
 
 
 class Lox:
-    def __init__(self, file_name: Optional[str] = None) -> None:
+    def __init__(self, file_name: Optional[str] = None, logger = None) -> None:
         self.file_name: Optional[str] = file_name
         self.input = None
+        self._logger = logger
 
     def run_file(self):
         if not self.file_name:
@@ -21,7 +23,7 @@ class Lox:
         if not self.input:
             raise Exception("Trying to run smth without input")
 
-        self.scanner = Scanner(self.input)
+        self.scanner = Scanner(self.input, self._logger)
         self.tokens:list[Token] = self.scanner.scan_tokens()
 
         for token in self.tokens:

@@ -1,8 +1,9 @@
+from typing import Optional
 from token_type import TokenType
 
 
 class Token:
-    def __init__(self, type: TokenType, lexeme: str, literal: str, line: int) -> None:
+    def __init__(self, type: TokenType, lexeme: str, literal: Optional[str], line: int) -> None:
         self.type = type
         self.lexeme = lexeme
         self.literal = literal

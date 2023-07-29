@@ -7,6 +7,9 @@ name = "pypi"
 structlog = "*"
 black = "*"
 pytest = "*"
+isort = "*"
+codespell = "*"
+flake8 = "*"
 
 [dev-packages]
 

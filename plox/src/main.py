@@ -5,6 +5,7 @@ from typing import Optional, Union
 from _token import Token
 from ast_printer import AstPrinter
 from expression import Expr
+from interpreter import Interpreter, LoxRuntimeError
 from log import get_logger
 from scanner import Scanner
 from token_type import TokenType
@@ -30,8 +31,8 @@ class Lox:
         self.scanner = Scanner(self.input)
         self.tokens: list[Token] = self.scanner.scan_tokens()
 
-        for token in self.tokens:
-            print(token.to_string())
+        # for token in self.tokens:
+        #     print(token.to_string())
 
         self.parser = Parser(self.tokens, self.error)
 
@@ -39,7 +40,11 @@ class Lox:
 
         if not expression:
             return
-        print(AstPrinter().print(expression))
+
+        self.interpreter = Interpreter(Lox.runtime_error)
+
+        self.interpreter.interpret(expression)
+        # print(AstPrinter().print(expression))
 
     def run_repl(self):
         while True:
@@ -58,6 +63,10 @@ class Lox:
             Lox.report(line.line, " at end", msg)
         else:
             Lox.report(line.line, f"at '{line.lexeme}'", msg)
+
+    @staticmethod
+    def runtime_error(error: LoxRuntimeError):
+        pass
 
     @staticmethod
     def report(line: int, where: str, message: str):

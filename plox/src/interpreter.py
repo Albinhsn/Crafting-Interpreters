@@ -3,6 +3,7 @@ from typing import Any
 from _token import Token
 from expression import (BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr,
                         Visitor)
+from stmt import ExpressionStmt, PrintStmt, Stmt
 from token_type import TokenType
 
 
@@ -14,12 +15,16 @@ class Interpreter(Visitor):
     def __init__(self, error) -> None:
         self.error = error
 
-    def interpret(self, expr: Expr):
+    def interpret(self, stmts: list[Stmt]):
         try:
-            value: Any = self._evaluate(expr)
-            print(value)
+            for stmt in stmts:
+                self._execute(stmt)
         except LoxRuntimeError as e:
             self.error(e)
+
+    def _execute(self, stmt: Stmt):
+        stmt.accept(self)
+
     def _stringify(self, obj: Any):
         if not obj:
             return "nil"
@@ -33,8 +38,15 @@ class Interpreter(Visitor):
             return txt
 
         # Does this never raise?
-        return str(obj) # should be .to_string()?
-    
+        return str(obj)  # should be .to_string()?
+
+    def visit_expression_stmt(self, stmt: ExpressionStmt):
+        self._evaluate(stmt.expression)
+
+    def visit_print_stmt(self, stmt: PrintStmt):
+        value: Any = self._evaluate(stmt.expression)
+        print(self._stringify(value))
+
     def visit_literal_expr(self, expr: LiteralExpr) -> Any:
         return expr.value
 

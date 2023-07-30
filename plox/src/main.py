@@ -8,6 +8,7 @@ from expression import Expr
 from interpreter import Interpreter, LoxRuntimeError
 from log import get_logger
 from scanner import Scanner
+from stmt import Stmt
 from token_type import TokenType
 
 
@@ -31,20 +32,12 @@ class Lox:
         self.scanner = Scanner(self.input)
         self.tokens: list[Token] = self.scanner.scan_tokens()
 
-        # for token in self.tokens:
-        #     print(token.to_string())
 
         self.parser = Parser(self.tokens, self.error)
-
-        expression: Expr = self.parser.parse()
-
-        if not expression:
-            return
+        stmts: list[Stmt] = self.parser.parse()
 
         self.interpreter = Interpreter(Lox.runtime_error)
-
-        self.interpreter.interpret(expression)
-        # print(AstPrinter().print(expression))
+        self.interpreter.interpret(stmts)
 
     def run_repl(self):
         while True:

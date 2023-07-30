@@ -1,1 +1,3 @@
-"hi" + " sailor"
+print "hi" + " sailor";
+print true;
+print 2 + 1;

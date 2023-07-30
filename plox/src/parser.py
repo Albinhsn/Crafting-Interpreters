@@ -3,6 +3,7 @@ from typing import Any, Union
 from _token import Token
 from expression import BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr
 from log import get_logger
+from stmt import ExpressionStmt, PrintStmt, Stmt
 from token_type import TokenType
 
 
@@ -17,11 +18,28 @@ class Parser:
         self.error = error
         # self.logger = get_logger()
 
-    def parse(self) -> Union[Expr, None]:
-        try:
-            return self._expression()
-        except ParseError:
-            return None 
+    def parse(self) -> list[Stmt]:
+        statements: list[Stmt] = []
+        while not self._is_at_end():
+            statements.append(self._statement())
+        return statements
+
+    def _statement(self):
+        if self._match(TokenType.PRINT):
+            return self._print_statement()
+        return self._expression_statement()
+
+    def _print_statement(self) -> Stmt:
+        value: Expr = self._expression()
+        self._consume(TokenType.SEMICOLON, "Expect ';' after value.")
+
+        return PrintStmt(value)
+
+    def _expression_statement(self):
+        expr: Expr = self._expression()
+        self._consume(TokenType.SEMICOLON, "Expect ';' after expression")
+
+        return ExpressionStmt(expr)
 
     def _expression(self) -> Expr:
         return self._equality()
@@ -103,7 +121,7 @@ class Parser:
             expr: Expr = self._expression()
             self._consume(TokenType.RIGHT_PAREN, "Expect ')' after expression")
             return GroupingExpr(expr)
-        self._error(self._peek(), "Expect expression") 
+        self._error(self._peek(), "Expect expression")
 
     def _consume(self, type: TokenType, msg: str):
         if self._check(type):

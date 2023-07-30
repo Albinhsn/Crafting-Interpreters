@@ -119,14 +119,10 @@ class Scanner:
 
     def _identifier(self):
         self._start = self._current
-        while self._is_alpha_numeric(self._peek()):
+        while self._is_alpha_numeric(self._peek_next()):
             self._advance()
 
-        # Hacky solution to fix where the last thing in input is a identifier
-        if self._is_at_end():
-            self._current += 1
-
-        txt: str = self.source[self._start : self._current]
+        txt: str = self.source[self._start : self._current+1]
         type: Union[TokenType, None] = self._keyword(txt)
         if not type:
             type = TokenType.IDENTIFIER
@@ -135,21 +131,31 @@ class Scanner:
 
     def _number(self) -> None:
         self._start = self._current
+
+        # Hacky solution to solve when last thing is number
+        if self._is_at_end():
+            self._current += 1
+
         while self._is_digit(self._peek()):
             self._advance()
+            
 
         if self._peek() == "." and self._is_digit(self._peek_next()):
+            # Consume the "."
             self._advance()
-            while self._is_digit(self._peek()):
+
+            while self._is_digit(self._peek_next()):
                 self._advance()
 
+
         self._add_token(
-            TokenType.NUMBER, float(self.source[self._start : self._current + 1])
+            TokenType.NUMBER, float(self.source[self._start : self._current])
         )
 
     def _string(self) -> None:
         self._advance()
         self._start = self._current
+
         while self._peek_next() != '"' and not self._is_at_end():
             if self._peek() == "\n":
                 self._line += 1
@@ -158,8 +164,8 @@ class Scanner:
         if self._is_at_end():
             raise Exception("Unterminated string")
 
+        value: str = self.source[self._start: self._current+1]
         self._advance()
-        value: str = self.source[self._start: self._current]
         self._add_token(TokenType.STRING, value)
 
     def _peek_next(self) -> str:

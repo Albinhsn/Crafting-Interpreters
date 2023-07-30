@@ -1,5 +1,7 @@
 from typing import Any, Optional, Union
 
+from structlog._config import BoundLoggerLazyProxy
+
 from _token import Token
 from token_type import TokenType
 
@@ -11,7 +13,7 @@ class Scanner:
         self._start = 0
         self._current = -1
         self._line = 1
-        self._logger = logger
+        self._logger: BoundLoggerLazyProxy= logger
         self.keywords = {
             "and": TokenType.AND,
             "class": TokenType.CLASS,
@@ -32,7 +34,7 @@ class Scanner:
         }
 
     def _is_at_end(self) -> bool:
-        return self._current >= len(self.source) - 1
+        return self._current >= len(self.source)-1
 
     def scan_tokens(self) -> list[Token]:
         while not self._is_at_end():
@@ -47,7 +49,6 @@ class Scanner:
 
     def _scan_token(self) -> None:
         c: str = self._advance()
-        self._logger.info("Scanning token at", current=self._current, c=c)
         match c:
             case "(":
                 self._add_token(TokenType.LEFT_PAREN)
@@ -101,6 +102,7 @@ class Scanner:
                 self._line += 1
             case '"':
                 self._string()
+
             case _:
                 if self._is_digit(c):
                     self._number()
@@ -133,9 +135,6 @@ class Scanner:
 
     def _number(self) -> None:
         self._start = self._current
-        self._logger.info(
-            "Found number, starts at", start=self._start, c=self.source[self._start]
-        )
         while self._is_digit(self._peek()):
             self._advance()
 
@@ -144,19 +143,14 @@ class Scanner:
             while self._is_digit(self._peek()):
                 self._advance()
 
-        self._logger.info(
-            "Converting number",
-            start=self._start,
-            current=self._current,
-            nmbr=self.source[self._start : self._current],
-        )
-
         self._add_token(
             TokenType.NUMBER, float(self.source[self._start : self._current + 1])
         )
 
     def _string(self) -> None:
-        while self._peek() != '"' and not self._is_at_end():
+        self._advance()
+        self._start = self._current
+        while self._peek_next() != '"' and not self._is_at_end():
             if self._peek() == "\n":
                 self._line += 1
             self._advance()
@@ -165,8 +159,7 @@ class Scanner:
             raise Exception("Unterminated string")
 
         self._advance()
-
-        value: str = self.source[self._start + 1 : self._current - 1]
+        value: str = self.source[self._start: self._current]
         self._add_token(TokenType.STRING, value)
 
     def _peek_next(self) -> str:
@@ -187,7 +180,6 @@ class Scanner:
 
     def _add_token(self, type: TokenType, literal: Optional[Any] = None) -> None:
         txt: str = self.source[self._start : self._current]
-
         self.tokens.append(Token(type, txt, literal, self._line))
 
     def _match(self, expected: str) -> bool:

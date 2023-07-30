@@ -1,16 +1,20 @@
 import sys
-from typing import Optional
-from _token import Token
-from log import get_logger
+from parser import Parser
+from typing import Optional, Union
 
+from _token import Token
+from ast_printer import AstPrinter
+from expression import Expr
+from log import get_logger
 from scanner import Scanner
+from token_type import TokenType
 
 
 class Lox:
-    def __init__(self, file_name: Optional[str] = None, logger = None) -> None:
+    def __init__(self, file_name: Optional[str] = None) -> None:
         self.file_name: Optional[str] = file_name
         self.input = None
-        self._logger = logger
+        # self._logger = get_logger()
 
     def run_file(self):
         if not self.file_name:
@@ -23,11 +27,19 @@ class Lox:
         if not self.input:
             raise Exception("Trying to run smth without input")
 
-        self.scanner = Scanner(self.input, self._logger)
-        self.tokens:list[Token] = self.scanner.scan_tokens()
+        self.scanner = Scanner(self.input)
+        self.tokens: list[Token] = self.scanner.scan_tokens()
 
         for token in self.tokens:
             print(token.to_string())
+
+        self.parser = Parser(self.tokens, self.error)
+
+        expression: Expr = self.parser.parse()
+
+        if not expression:
+            return
+        print(AstPrinter().print(expression))
 
     def run_repl(self):
         while True:
@@ -38,12 +50,18 @@ class Lox:
                 break
 
     @staticmethod
-    def error(line: int, msg: str):
-        Lox.report(line, "", msg)
+    def error(line: Union[int, Token], msg: str):
+        if isinstance(line, int):
+            Lox.report(line, "", msg)
+            return
+        if line.type == TokenType.EOF:
+            Lox.report(line.line, " at end", msg)
+        else:
+            Lox.report(line.line, f"at '{line.lexeme}'", msg)
 
     @staticmethod
     def report(line: int, where: str, message: str):
-        raise Exception(f"[line {line}] Error {where} : {message}")
+        print(f"[line {line}] Error {where} : {message}")
 
 
 if __name__ == "__main__":

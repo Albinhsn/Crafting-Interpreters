@@ -18,11 +18,11 @@ def get_tokens(s: str):
 def test_random_code():
     scanner = get_tokens("var fem = 5\nvar sju = fem + 2")
     assert scanner.tokens[0].type == TokenType.VAR
-    
-    assert scanner.tokens[1].type == TokenType.IDENTIFIER
-    assert scanner.tokens[1].literal == "fem" 
 
-    assert scanner.tokens[2].type == TokenType.EQUAL 
+    assert scanner.tokens[1].type == TokenType.IDENTIFIER
+    assert scanner.tokens[1].literal == "fem"
+
+    assert scanner.tokens[2].type == TokenType.EQUAL
 
     assert scanner.tokens[3].type == TokenType.NUMBER
     assert scanner.tokens[3].literal == 5
@@ -30,17 +30,24 @@ def test_random_code():
     assert scanner.tokens[4].type == TokenType.VAR
 
     assert scanner.tokens[5].type == TokenType.IDENTIFIER
-    assert scanner.tokens[5].literal == "sju" 
+    assert scanner.tokens[5].literal == "sju"
 
-    assert scanner.tokens[6].type == TokenType.EQUAL 
+    assert scanner.tokens[6].type == TokenType.EQUAL
 
     assert scanner.tokens[7].type == TokenType.IDENTIFIER
-    assert scanner.tokens[7].literal == "fem" 
-    
+    assert scanner.tokens[7].literal == "fem"
+
     assert scanner.tokens[8].type == TokenType.PLUS
 
     assert scanner.tokens[9].type == TokenType.NUMBER
-    assert scanner.tokens[9].literal == 2 
+    assert scanner.tokens[9].literal == 2
+
+
+def test_string():
+    scanner = get_tokens('"testing this stuff"')
+    assert scanner.tokens[0].type == TokenType.STRING
+    assert scanner.tokens[0].literal == "testing this stuff"
+
 
 def test_identifiers():
     scanner = get_tokens("testing this stuff")
@@ -53,9 +60,10 @@ def test_identifiers():
     assert scanner.tokens[2].type == TokenType.IDENTIFIER
     assert scanner.tokens[2].literal == "stuff"
 
+
 def test_single_chars():
     scanner = get_tokens("(){},.-+;=*!<>")
-    
+
     assert scanner.tokens[0].type == TokenType.LEFT_PAREN
     assert scanner.tokens[1].type == TokenType.RIGHT_PAREN
     assert scanner.tokens[2].type == TokenType.LEFT_BRACE
@@ -73,6 +81,7 @@ def test_single_chars():
 
     assert scanner.tokens[14].type == TokenType.EOF
 
+
 def test_double_chars():
     scanner = get_tokens("!===<=>=")
 
@@ -80,6 +89,7 @@ def test_double_chars():
     assert scanner.tokens[1].type == TokenType.EQUAL_EQUAL
     assert scanner.tokens[2].type == TokenType.LESS_EQUAL
     assert scanner.tokens[3].type == TokenType.GREATER_EQUAL
+
 
 def test_numbers():
     scanner = get_tokens("1 1.0 11.01")
@@ -95,16 +105,17 @@ def test_numbers():
 
     assert scanner.tokens[3].type == TokenType.EOF
 
+
 def test_keywords():
     scanner = get_tokens(
         "and class else false for fun if nil or print return super this true var while"
     )
 
     assert scanner.tokens[0].type == TokenType.AND
-    assert scanner.tokens[0].literal == "and" 
+    assert scanner.tokens[0].literal == "and"
 
     assert scanner.tokens[1].type == TokenType.CLASS
-    assert scanner.tokens[1].literal == "class" 
+    assert scanner.tokens[1].literal == "class"
 
     assert scanner.tokens[2].type == TokenType.ELSE
     assert scanner.tokens[2].literal == "else"

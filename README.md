@@ -1,1 +1,1 @@
-Following the https://github.com/Albinhsn/Crafting-Interpreters.git book
+Following the http://craftinginterpreters.com/book

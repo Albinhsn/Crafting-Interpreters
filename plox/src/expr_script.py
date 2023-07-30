@@ -8,20 +8,30 @@ if __name__ == "__main__":
 
     output_dir = args[1]
     fp = open(output_dir, "w")
-    fp.write(
-        """from abc import ABC
-from _token import Token
-
-class Expr(ABC):
-    pass
-    """
-    )
     x = [
-            "Binary   ;left: Expr, operator: Token, right: Expr",
-            "Grouping ;expr: Expr",
-            "Literal  ;value: dict",
-            "Unary    ;operator: Token,right:Expr",
+        "Binary   ;left: Expr, operator: Token, right: Expr",
+        "Grouping ;expr: Expr",
+        "Literal  ;value: dict",
+        "Unary    ;operator: Token,right:Expr",
     ]
+    k = f"""from abc import ABC
+from _token import Token
+class Visitor(ABC):
+    pass
+""" 
+    s = ""
+    for t in x:
+        t = t.split(";")
+        class_name = t[0].strip().lower()
+        s += f"""
+    def visit_{class_name}(self, cls):
+        pass
+"""
+    k += s
+    k += """class Expr(ABC):
+    pass
+"""
+
     for t in x:
         t = t.split(";")
         class_name = t[0].strip()
@@ -29,8 +39,11 @@ class Expr(ABC):
         s = ""
         for f in fields:
             s += f"        self.{f} = {f.split(':')[0]}\n"
-        k = f"""\nclass {class_name}(Expr):
+        k += f"""\nclass {class_name}(Expr, Visitor):
     def __init__(self, {', '.join(fields)}):
 {s}
+
+    def accept(self, visitor: Visitor):
+        visitor.visit_{class_name.lower()}(self)
         """
-        fp.write(k)
+    fp.write(k)

@@ -13,6 +13,9 @@ class Visitor(ABC):
     def visit_grouping_expr(self, cls):
         pass
 
+    def visit_logical_expr(self, cls):
+        pass
+
     def visit_literal_expr(self, cls):
         pass
 
@@ -32,6 +35,12 @@ class Visitor(ABC):
         pass
 
     def visit_block_stmt(self, cls):
+        pass
+
+    def visit_if_stmt(self, cls):
+        pass
+
+    def visit_while_stmt(self, cls):
         pass
 class Expr(ABC):
     def accept(self, a: Any):
@@ -64,9 +73,19 @@ class GroupingExpr(Expr, Visitor):
     def accept(self, visitor: Visitor):
         return visitor.visit_grouping_expr(self)
         
+class LogicalExpr(Expr, Visitor):
+    def __init__(self,  left: Expr,  operator: Token,  right: Expr):
+        self. left: Expr =  left
+        self. operator: Token =  operator
+        self. right: Expr =  right
+
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_logical_expr(self)
+        
 class LiteralExpr(Expr, Visitor):
-    def __init__(self, value: dict):
-        self.value: dict = value
+    def __init__(self, value: Any):
+        self.value: Any = value
 
 
     def accept(self, visitor: Visitor):

@@ -139,7 +139,6 @@ class Scanner:
         while self._is_digit(self._peek()):
             self._advance()
             
-
         if self._peek() == "." and self._is_digit(self._peek_next()):
             # Consume the "."
             self._advance()
@@ -151,6 +150,7 @@ class Scanner:
         self._add_token(
             TokenType.NUMBER, float(self.source[self._start : self._current])
         )
+        self._current -= 1
 
     def _string(self) -> None:
         self._advance()

@@ -15,6 +15,66 @@ def get_tokens(s: str):
     return scanner
 
 
+
+def test_fibonacci():
+    scanner = get_tokens(
+        """
+var a = 0;
+var temp;
+
+for (var b = 1; a < 5; b = temp + b) {
+  print a;
+  temp = a;
+  a = b;
+}
+
+                         """
+    )
+    assert scanner.tokens[1].literal == "a"
+    assert scanner.tokens[6].literal == "temp"
+    assert [i.type.name for i in scanner.tokens] == [
+        "VAR",  # var
+        "IDENTIFIER",  # a
+        "EQUAL",  # =
+        "NUMBER",  # 0
+        "SEMICOLON",  # ;
+        "VAR",  # var
+        "IDENTIFIER",  # temp
+        "SEMICOLON",  # ;
+        "FOR",  # for
+        "LEFT_PAREN",  # (
+        "VAR",  # var
+        "IDENTIFIER",  # b
+        "EQUAL",  # =
+        "NUMBER",  # 1
+        "SEMICOLON",  # ;
+        "IDENTIFIER",  # a
+        "LESS",  # <
+        "NUMBER",  # 5
+        "SEMICOLON",  # ;
+        "IDENTIFIER",  # b
+        "EQUAL",  # =
+        "IDENTIFIER",  # temp
+        "PLUS",  # +
+        "IDENTIFIER",  # b
+        "RIGHT_PAREN",  # )
+        "LEFT_BRACE",  # {
+        "PRINT",  # print
+        "IDENTIFIER",  # a
+        "SEMICOLON",  # ;
+        "IDENTIFIER",  # temp
+        "EQUAL",  # =
+        "IDENTIFIER",  # a
+        "SEMICOLON",  # ;
+        "IDENTIFIER",  # a
+        "EQUAL",  # =
+        "IDENTIFIER",  # b
+        "SEMICOLON",  # ;
+        "RIGHT_BRACE",  # }
+        "EOF",  # }
+    ]
+
+
 def test_semi():
     scanner = get_tokens("print 5!")
     assert scanner.tokens[1].type == TokenType.NUMBER
@@ -176,6 +236,7 @@ def test_keywords():
     assert scanner.tokens[21].literal == "while"
 
     assert scanner.tokens[22].type == TokenType.EOF
+
 
 if __name__ == "__main__":
     test_keywords()

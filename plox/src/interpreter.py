@@ -3,8 +3,11 @@ from typing import Any
 from _token import Token
 from environment import Environment
 from expression import (AssignExpr, BinaryExpr, Expr, GroupingExpr,
-                        LiteralExpr, UnaryExpr, VariableExpr, Visitor)
-from stmt import BlockStmt, ExpressionStmt, PrintStmt, Stmt, VarStmt
+                        LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr,
+                        Visitor)
+from log import get_logger
+from stmt import (BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt,
+                  WhileStmt)
 from token_type import TokenType
 
 
@@ -16,6 +19,7 @@ class Interpreter(Visitor):
     def __init__(self, error) -> None:
         self.error = error
         self.environment = Environment()
+        self.logger = get_logger()
 
     def interpret(self, stmts: list[Stmt]):
         try:
@@ -45,9 +49,16 @@ class Interpreter(Visitor):
     def visit_expression_stmt(self, stmt: ExpressionStmt):
         self._evaluate(stmt.expression)
 
+    def visit_if_stmt(self, stmt: IfStmt):
+        if self._is_truthy(self._evaluate(stmt.condition)):
+            self._execute(stmt.then_branch)
+        elif stmt.else_branch is not None:
+            self._execute((stmt.else_branch))
+
+        return None
+
     def visit_block_stmt(self, stmt: BlockStmt):
-        self._execute_block(stmt.statements, Environment())
-        return
+        return self._execute_block(stmt.statements, Environment())
 
     def visit_print_stmt(self, stmt: PrintStmt):
         value: Any = self._evaluate(stmt.expression)
@@ -57,13 +68,13 @@ class Interpreter(Visitor):
         value: Any = None
         if stmt.initializer is not None:
             value = self._evaluate(stmt.initializer)
-
+        self.logger.info("Defining var stmt", value=value, name=stmt.name.lexeme)
         self.environment._define(stmt.name.lexeme, value)
         return None
 
     def visit_assign_expr(self, expr: AssignExpr):
         value: Any = self._evaluate(expr.value)
-
+        self.logger.info("Assign expr", value=value)
         self.environment._assign(expr.name, value)
         return value
 
@@ -72,6 +83,23 @@ class Interpreter(Visitor):
 
     def visit_variable_expr(self, expr: VariableExpr):
         return self.environment.get(expr.name)
+
+    def visit_logical_expr(self, expr: LogicalExpr):
+        left = self._evaluate(expr.left)
+
+        if expr.operator.type == TokenType.OR:
+            if self._is_truthy(left):
+                return left
+        else:
+            if not self._is_truthy(left):
+                return left
+        return self._evaluate(expr.right)
+
+    def visit_while_stmt(self, stmt: WhileStmt):
+        while self._is_truthy(self._evaluate(stmt.condition)):
+            self._execute(stmt.body)
+
+        return None
 
     def visit_unary_expr(self, expr: UnaryExpr):
         right: Any = self._evaluate(expr.right)
@@ -157,7 +185,7 @@ class Interpreter(Visitor):
         previous: Environment = self.environment
         try:
             self.environment = environment
-
+            self.logger.info("Environment", env=self.environment.values, arg=environment.values)
             for statement in statements:
                 self._execute(statement)
         finally:

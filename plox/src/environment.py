@@ -1,14 +1,17 @@
 from typing import Any, Optional
 
 from _token import Token
+from log import get_logger
 
 
 class Environment:
     def __init__(self, enclosing = None) -> None:
         self.values: dict = {}
         self.enclosing = enclosing
+        self.logger = get_logger()
 
     def _define(self, name: str, value: Any):
+        self.logger.info("Defining in env", name=name, value=value)   
         self.values[name] = value
 
     def get(self, name: Token):

@@ -19,6 +19,12 @@ class Visitor(ABC):
     def visit_unary_expr(self, cls):
         pass
 
+    def visit_expression_stmt(self, cls):
+        pass
+
+    def visit_print_stmt(self, cls):
+        pass
+
 
 class Expr(ABC):
     def accept(self, a: Any):

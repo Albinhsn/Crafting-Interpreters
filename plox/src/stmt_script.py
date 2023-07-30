@@ -9,27 +9,15 @@ if __name__ == "__main__":
     output_dir = args[1]
     fp = open(output_dir, "w")
     x = [
-        "Binary   ;left: Expr, operator: Token, right: Expr",
-        "Grouping ;expression: Expr",
-        "Literal  ;value: dict",
-        "Unary    ;operator: Token,right:Expr",
+        "Expression ;  expression: Expr",
+        "Print ;  expression: Expr",
     ]
-    k = f"""from abc import ABC
+    k = """from abc import ABC
 from typing import Any
 from _token import Token
-class Visitor(ABC):
-    pass
-"""
-    s = ""
-    for t in x:
-        t = t.split(";")
-        class_name = t[0].strip().lower()
-        s += f"""
-    def visit_{class_name}_expr(self, cls):
-        pass
-"""
-    k += s
-    k += """class Expr(ABC):
+from expression import Expr, Visitor
+
+class Stmt(ABC):
     def accept(self, a: Any):
         pass
 """
@@ -41,11 +29,11 @@ class Visitor(ABC):
         s = ""
         for f in fields:
             s += f"        self.{f} = {f.split(':')[0]}\n"
-        k += f"""\nclass {class_name}Expr(Expr, Visitor):
+        k += f"""\nclass {class_name}Stmt(Stmt, Visitor):
     def __init__(self, {', '.join(fields)}):
 {s}
 
     def accept(self, visitor: Visitor):
-        visitor.visit_{class_name.lower()}_expr(self)
+        visitor.visit_{class_name.lower()}_stmt(self)
         """
     fp.write(k)

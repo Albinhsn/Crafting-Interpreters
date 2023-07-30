@@ -11,6 +11,8 @@ if __name__ == "__main__":
     x = [
         "Expression ;  expression: Expr",
         "Print ;  expression: Expr",
+        "Var ; name: Token, initializer: Expr",
+        "Block ; stmts: list[Stmt]",
     ]
     k = """from abc import ABC
 from typing import Any

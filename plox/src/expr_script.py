@@ -9,10 +9,12 @@ if __name__ == "__main__":
     output_dir = args[1]
     fp = open(output_dir, "w")
     x = [
+        "Assign ; name: Token, value: Expr",
         "Binary   ;left: Expr, operator: Token, right: Expr",
         "Grouping ;expression: Expr",
         "Literal  ;value: dict",
         "Unary    ;operator: Token,right:Expr",
+        "Variable ; name: Token",
     ]
     k = f"""from abc import ABC
 from typing import Any
@@ -26,6 +28,12 @@ class Visitor(ABC):
         class_name = t[0].strip().lower()
         s += f"""
     def visit_{class_name}_expr(self, cls):
+        pass
+"""
+    X = ["var", "print", "expression", "block"]
+    for i in X:
+        s += f"""
+    def visit_{i}_stmt(self, cls):
         pass
 """
     k += s
@@ -46,6 +54,6 @@ class Visitor(ABC):
 {s}
 
     def accept(self, visitor: Visitor):
-        visitor.visit_{class_name.lower()}_expr(self)
+        return visitor.visit_{class_name.lower()}_expr(self)
         """
     fp.write(k)

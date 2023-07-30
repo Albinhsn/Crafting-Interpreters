@@ -1,9 +1,10 @@
 from typing import Any
 
 from _token import Token
-from expression import (BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr,
-                        Visitor)
-from stmt import ExpressionStmt, PrintStmt, Stmt
+from environment import Environment
+from expression import (AssignExpr, BinaryExpr, Expr, GroupingExpr,
+                        LiteralExpr, UnaryExpr, VariableExpr, Visitor)
+from stmt import BlockStmt, ExpressionStmt, PrintStmt, Stmt, VarStmt
 from token_type import TokenType
 
 
@@ -14,6 +15,7 @@ class LoxRuntimeError(Exception):
 class Interpreter(Visitor):
     def __init__(self, error) -> None:
         self.error = error
+        self.environment = Environment()
 
     def interpret(self, stmts: list[Stmt]):
         try:
@@ -43,12 +45,33 @@ class Interpreter(Visitor):
     def visit_expression_stmt(self, stmt: ExpressionStmt):
         self._evaluate(stmt.expression)
 
+    def visit_block_stmt(self, stmt: BlockStmt):
+        self._execute_block(stmt.statements, Environment())
+        return
+
     def visit_print_stmt(self, stmt: PrintStmt):
         value: Any = self._evaluate(stmt.expression)
         print(self._stringify(value))
 
+    def visit_var_stmt(self, stmt: VarStmt):
+        value: Any = None
+        if stmt.initializer is not None:
+            value = self._evaluate(stmt.initializer)
+
+        self.environment._define(stmt.name.lexeme, value)
+        return None
+
+    def visit_assign_expr(self, expr: AssignExpr):
+        value: Any = self._evaluate(expr.value)
+
+        self.environment._assign(expr.name, value)
+        return value
+
     def visit_literal_expr(self, expr: LiteralExpr) -> Any:
         return expr.value
+
+    def visit_variable_expr(self, expr: VariableExpr):
+        return self.environment.get(expr.name)
 
     def visit_unary_expr(self, expr: UnaryExpr):
         right: Any = self._evaluate(expr.right)
@@ -129,6 +152,16 @@ class Interpreter(Visitor):
             return
 
         raise LoxRuntimeError(operator, "Operand must be a number")
+
+    def _execute_block(self, statements: list[Stmt], environment: Environment):
+        previous: Environment = self.environment
+        try:
+            self.environment = environment
+
+            for statement in statements:
+                self._execute(statement)
+        finally:
+            self.environment = previous
 
     def _check_number_operands(self, operator: Token, left_operand: Any, right_operand):
         if isinstance(left_operand, float) and isinstance(right_operand, float):

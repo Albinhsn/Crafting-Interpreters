@@ -39,6 +39,7 @@ class Scanner:
 
     def scan_tokens(self) -> list[Token]:
         while not self._is_at_end():
+            self._start = self._current
             self._scan_token()
 
         self.tokens.append(Token(TokenType.EOF, "", None, self._line))
@@ -164,8 +165,8 @@ class Scanner:
         if self._is_at_end():
             raise Exception("Unterminated string")
 
-        value: str = self.source[self._start: self._current+1]
         self._advance()
+        value: str = self.source[self._start: self._current]
         self._add_token(TokenType.STRING, value)
 
     def _peek_next(self) -> str:

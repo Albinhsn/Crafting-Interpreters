@@ -15,6 +15,13 @@ def get_tokens(s: str):
     return scanner
 
 
+def test_less():
+    scanner = get_tokens("1 < 5")
+    assert scanner.tokens[1].type == TokenType.LESS
+    assert scanner.tokens[1].literal == None
+    assert scanner.tokens[1].lexeme == "<"
+
+
 def test_fibonacci():
     scanner = get_tokens(
         """
@@ -31,24 +38,26 @@ for (var b = 1; a < 5; b = temp + b) {
     )
     assert scanner.tokens[1].literal == "a"
     assert scanner.tokens[6].literal == "temp"
+    assert scanner.tokens[16].lexeme == TokenType.LESS
+    assert scanner.tokens[16].literal == "temp"
     assert [i.type.name for i in scanner.tokens] == [
-        "VAR",  # var
-        "IDENTIFIER",  # a
-        "EQUAL",  # =
-        "NUMBER",  # 0
-        "SEMICOLON",  # ;
-        "VAR",  # var
-        "IDENTIFIER",  # temp
-        "SEMICOLON",  # ;
-        "FOR",  # for
-        "LEFT_PAREN",  # (
-        "VAR",  # var
-        "IDENTIFIER",  # b
-        "EQUAL",  # =
-        "NUMBER",  # 1
-        "SEMICOLON",  # ;
-        "IDENTIFIER",  # a
-        "LESS",  # <
+        "VAR",  # var 1
+        "IDENTIFIER",  # a 2
+        "EQUAL",  # = 3
+        "NUMBER",  # 0 4
+        "SEMICOLON",  # ; 5
+        "VAR",  # var 6
+        "IDENTIFIER",  # temp 7
+        "SEMICOLON",  # ; 8
+        "FOR",  # for 9
+        "LEFT_PAREN",  # ( 10
+        "VAR",  # var 11
+        "IDENTIFIER",  # b 12
+        "EQUAL",  # = 13
+        "NUMBER",  # 1 14
+        "SEMICOLON",  # ; 15
+        "IDENTIFIER",  # a 16
+        "LESS",  # < 17
         "NUMBER",  # 5
         "SEMICOLON",  # ;
         "IDENTIFIER",  # b

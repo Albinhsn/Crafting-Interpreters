@@ -7,14 +7,15 @@ from log import get_logger
 class Environment:
     def __init__(self, enclosing=None) -> None:
         self.values: dict = {}
-        self.enclosing = enclosing
+        self.enclosing: Optional[Environment] = enclosing
         self.logger = get_logger()
 
     def _define(self, name: str, value: Any):
-        self.logger.info("Defining in env", name=name, value=value)
+        # self.logger.info("Defining in env", name=name, value=value)
         self.values[name] = value
 
     def get(self, name: Token):
+        # self.logger.info("Get", name=name.lexeme, values=self.values)
         if name.lexeme in self.values:
             return self.values[name.lexeme]
 

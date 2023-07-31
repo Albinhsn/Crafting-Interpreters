@@ -1,4 +1,5 @@
 from typing import Any
+from time import sleep 
 
 from _token import Token
 from environment import Environment
@@ -6,7 +7,8 @@ from expression import (AssignExpr, BinaryExpr, Expr, GroupingExpr,
                         LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr,
                         Visitor)
 from log import get_logger
-from stmt import BlockStmt, ExpressionStmt, PrintStmt, Stmt, VarStmt, WhileStmt, IfStmt
+from stmt import (BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt,
+                  WhileStmt)
 from token_type import TokenType
 
 
@@ -23,6 +25,7 @@ class Interpreter(Visitor):
     def interpret(self, stmts: list[Stmt]):
         try:
             for stmt in stmts:
+                # self.logger.info("Executing stmt", stmt=stmt)
                 self._execute(stmt)
         except LoxRuntimeError as e:
             self.error(e)
@@ -31,7 +34,7 @@ class Interpreter(Visitor):
         stmt.accept(self)
 
     def _stringify(self, obj: Any):
-        if not obj:
+        if obj is None:
             return "nil"
 
         if isinstance(obj, float):
@@ -49,7 +52,7 @@ class Interpreter(Visitor):
         self._evaluate(stmt.expression)
 
     def visit_block_stmt(self, stmt: BlockStmt):
-        self._execute_block(stmt.statements, Environment())
+        self._execute_block(stmt.statements, self.environment)
         return
 
     def visit_if_stmt(self, stmt: IfStmt):
@@ -67,7 +70,9 @@ class Interpreter(Visitor):
     def visit_var_stmt(self, stmt: VarStmt):
         value: Any = None
         if stmt.initializer is not None:
+            # self.logger.info("evaluating initializer", init=stmt.initializer)
             value = self._evaluate(stmt.initializer)
+            # self.logger.info("got value from initializer", value=value)
         self.environment._define(stmt.name.lexeme, value)
         return None
 
@@ -95,6 +100,7 @@ class Interpreter(Visitor):
 
     def visit_while_stmt(self, stmt: WhileStmt):
         while self._is_truthy(self._evaluate(stmt.condition)):
+            # self.logger.info("Inside while body", left=self.environment.get(stmt.condition.left.name), cond=stmt.condition.operator.type, right=stmt.condition.right.value)
             self._execute(stmt.body)
 
         return None
@@ -185,8 +191,9 @@ class Interpreter(Visitor):
             self.environment = environment
             for statement in statements:
                 self._execute(statement)
-        finally:
-            self.environment = previous
+        except Exception:
+            pass
+        self.environment = previous
 
     def _check_number_operands(self, operator: Token, left_operand: Any, right_operand):
         if isinstance(left_operand, float) and isinstance(right_operand, float):

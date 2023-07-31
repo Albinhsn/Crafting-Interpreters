@@ -83,6 +83,9 @@ class LiteralExpr(Expr, Visitor):
     def __init__(self, value: Any):
         self.value: Any = value
 
+    def accept(self, visitor: Visitor):
+        return visitor.visit_literal_expr(self)
+
 
 class LogicalExpr(Expr, Visitor):
     def __init__(self, left: Expr, operator: Token, right: Expr):

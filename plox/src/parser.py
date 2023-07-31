@@ -38,6 +38,7 @@ class Parser:
 
     def _var_declaration(self):
         name: Token = self._consume(TokenType.IDENTIFIER, "Expect variable name")
+        self.logger.info("Consumed identifier", name=name.lexeme)
 
         initializer: Expr = None
 

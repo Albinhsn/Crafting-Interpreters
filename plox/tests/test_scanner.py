@@ -10,7 +10,7 @@ LOGGER = get_logger()
 
 
 def get_tokens(s: str):
-    scanner = Scanner(s, LOGGER)
+    scanner = Scanner(s)
     scanner.scan_tokens()
     return scanner
 

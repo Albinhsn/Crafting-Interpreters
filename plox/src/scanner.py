@@ -14,7 +14,7 @@ class Scanner:
         self._start = 0
         self._current = -1
         self._line = 1
-        self._logger: BoundLoggerLazyProxy= get_logger() 
+        self.logger: BoundLoggerLazyProxy= get_logger() 
         self.keywords = {
             "and": TokenType.AND,
             "class": TokenType.CLASS,
@@ -127,9 +127,8 @@ class Scanner:
         type: Union[TokenType, None] = self._keyword(txt)
         if not type:
             type = TokenType.IDENTIFIER
-
+        # self.logger.info("Found identifier", txt=txt)
         self._add_token(type, txt)
-
     def _number(self) -> None:
         self._start = self._current
 
@@ -144,10 +143,10 @@ class Scanner:
             # Consume the "."
             self._advance()
 
-            while self._is_digit(self._peek_next()):
+            while self._is_digit(self._peek()):
                 self._advance()
 
-
+        # self.logger.info("Found number", number=self.source[self._start : self._current])
         self._add_token(
             TokenType.NUMBER, float(self.source[self._start : self._current])
         )
@@ -186,7 +185,7 @@ class Scanner:
         return self.source[self._current]
 
     def _add_token(self, type: TokenType, literal: Optional[Any] = None) -> None:
-        txt: str = self.source[self._start : self._current]
+        txt: str = literal if literal else self.source[self._start : self._current]
         self.tokens.append(Token(type, txt, literal, self._line))
 
     def _match(self, expected: str) -> bool:

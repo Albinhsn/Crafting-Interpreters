@@ -68,13 +68,11 @@ class Interpreter(Visitor):
         value: Any = None
         if stmt.initializer is not None:
             value = self._evaluate(stmt.initializer)
-        self.logger.info("Defining var stmt", value=value, name=stmt.name.lexeme)
         self.environment._define(stmt.name.lexeme, value)
         return None
 
     def visit_assign_expr(self, expr: AssignExpr):
         value: Any = self._evaluate(expr.value)
-        self.logger.info("Assign expr", value=value)
         self.environment._assign(expr.name, value)
         return value
 
@@ -185,7 +183,6 @@ class Interpreter(Visitor):
         previous: Environment = self.environment
         try:
             self.environment = environment
-            self.logger.info("Environment", env=self.environment.values, arg=environment.values)
             for statement in statements:
                 self._execute(statement)
         finally:

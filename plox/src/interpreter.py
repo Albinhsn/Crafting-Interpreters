@@ -1,4 +1,3 @@
-from time import sleep
 from typing import Any
 
 from _token import Token
@@ -9,7 +8,7 @@ from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr,
 from log import get_logger
 from loxcallable import Clock, LoxCallable, LoxFunction
 from stmt import (BlockStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt,
-                  Stmt, VarStmt, WhileStmt)
+                  ReturnStmt, Stmt, VarStmt, WhileStmt)
 from token_type import TokenType
 
 
@@ -60,7 +59,7 @@ class Interpreter(Visitor):
         return
 
     def visit_function_stmt(self, stmt: FunctionStmt):
-        function = LoxFunction(stmt)
+        function = LoxFunction(stmt, self.environment)
         self.environment._define(stmt.name.lexeme, function)
         return None
 
@@ -82,6 +81,13 @@ class Interpreter(Visitor):
             value = self._evaluate(stmt.initializer)
         self.environment._define(stmt.name.lexeme, value)
         return None
+
+    def visit_return_stmt(self, stmt: ReturnStmt):
+        value = None
+        if stmt.value is not None:
+            value = self._evaluate(stmt.value)
+
+        raise Return(value)
 
     def visit_while_stmt(self, stmt: WhileStmt):
         while self._is_truthy(self._evaluate(stmt.condition)):

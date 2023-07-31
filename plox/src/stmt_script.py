@@ -11,8 +11,7 @@ if __name__ == "__main__":
     x = [
         "Expression ;  expression: Expr",
         "Print ;  expression: Expr",
-        "Var ; name: Token, initializer: Expr",
-        "Block ; stmts: list[Stmt]",
+        "Return ; keyword:Token, value: Expr",
         "Var ; name:Token, initializer:Expr",
         "While ; condition:Expr, body:Stmt",
         "Block ; statements: list[Stmt]",
@@ -41,7 +40,6 @@ class Stmt(ABC):
 {s}
 
     def accept(self, visitor: Visitor):
-        visitor.visit_{class_name.lower()}_stmt(self)
         return visitor.visit_{class_name.lower()}_stmt(self)
         """
     fp.write(k)

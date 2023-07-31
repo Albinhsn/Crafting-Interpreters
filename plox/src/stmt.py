@@ -26,6 +26,15 @@ class PrintStmt(Stmt, Visitor):
         return visitor.visit_print_stmt(self)
 
 
+class ReturnStmt(Stmt, Visitor):
+    def __init__(self, keyword: Token, value: Expr):
+        self.keyword: Token = keyword
+        self.value: Expr = value
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_return_stmt(self)
+
+
 class VarStmt(Stmt, Visitor):
     def __init__(self, name: Token, initializer: Expr):
         self.name: Token = name

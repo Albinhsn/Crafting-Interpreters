@@ -5,6 +5,11 @@ from environment import Environment
 from stmt import FunctionStmt
 
 
+class Return(Exception):
+    def __init__(self, value) -> None:
+        self.value = value
+
+
 class LoxCallable(ABC):
     def _call(self, interpreter, arguments: list[Any]):
         pass
@@ -14,15 +19,19 @@ class LoxCallable(ABC):
 
 
 class LoxFunction(LoxCallable):
-    def __init__(self, declaration: FunctionStmt) -> None:
+    def __init__(self, declaration: FunctionStmt, closure: Environment) -> None:
         self._declaration: FunctionStmt = declaration
+        self.closure: Environment = closure
 
     def _call(self, interpreter, arguments: list[Any]):
-        environment: Environment = Environment(interpreter.globals)
+        environment: Environment = Environment(self.closure)
         for i in range(len(self._declaration.params)):
             environment._define(self._declaration.params[i].lexeme, arguments[i]),
 
-        interpreter._execute_block(self._declaration.body, environment)
+        try:
+            interpreter._execute_block(self._declaration.body, environment)
+        except Return as r:
+            return r.value
         return None
 
     def _arity(self):

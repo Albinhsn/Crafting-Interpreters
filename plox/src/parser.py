@@ -1,10 +1,12 @@
+import time
 from typing import Any, Union
 
 from _token import Token
 from expression import (AssignExpr, BinaryExpr, Expr, GroupingExpr,
-                        LiteralExpr, UnaryExpr, VariableExpr)
+                        LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr)
 from log import get_logger
-from stmt import BlockStmt, ExpressionStmt, PrintStmt, Stmt, VarStmt
+from stmt import (BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt,
+                  WhileStmt)
 from token_type import TokenType
 
 
@@ -17,12 +19,13 @@ class Parser:
         self._current: int = 0
         self.tokens = tokens
         self.error = error
-        # self.logger = get_logger()
+        self.logger = get_logger()
 
     def parse(self) -> list[Stmt]:
         statements: list[Stmt] = []
         while not self._is_at_end():
             statements.append(self._declaration())
+        # self.logger.info("Got statements", len=len(statements))
         return statements
 
     def _declaration(self) -> Stmt:
@@ -36,22 +39,84 @@ class Parser:
 
     def _var_declaration(self):
         name: Token = self._consume(TokenType.IDENTIFIER, "Expect variable name")
+        # self.logger.info("Consumed identifier", name=name.lexeme)
 
         initializer: Expr = None
 
         if self._match(TokenType.EQUAL):
+            # self.logger.info("Found equal in var_declaration")
             initializer = self._expression()
+            # self.logger.info("Got init", init=initializer.value)
 
         self._consume(TokenType.SEMICOLON, "Expect ';' after variable declaration")
-
+        # self.logger.info("Returning var stmt", name=name.literal, init=initializer.value)
         return VarStmt(name, initializer)
 
     def _statement(self):
+        if self._match(TokenType.FOR):
+            # self.logger.info("Found for")
+            return self._for_statement()
         if self._match(TokenType.PRINT):
             return self._print_statement()
         if self._match(TokenType.LEFT_BRACE):
             return BlockStmt(self._block())
         return self._expression_statement()
+
+    def _if_statement(self):
+        self._consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.")
+
+        condition: Expr = self._expression()
+
+        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition")
+
+        then_branch: Stmt = self._statement()
+
+        else_branch: Stmt = None
+
+        if self._match(TokenType.ELSE):
+            else_branch = self._statement()
+
+        return IfStmt(condition, then_branch, else_branch)
+
+    def _for_statement(self) -> Stmt:
+        self._consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.")
+
+        initializer = None
+
+        if self._match(TokenType.SEMICOLON):
+            initializer = None
+        elif self._match(TokenType.VAR):
+            initializer = self._var_declaration()
+        else:
+            initializer = self._expression_statement()
+
+        # self.logger.info("Found init", init=initializer)
+        condition: Expr = None
+        if not self._check(TokenType.SEMICOLON):
+            condition = self._expression()
+
+
+        self._consume(TokenType.SEMICOLON, "Expect ';' after loop condition")
+
+        # self.logger.info("Found condition", condition=condition)
+        increment: Expr = None
+        if not self._check(TokenType.RIGHT_PAREN):
+            increment = self._expression()
+        # self.logger.info("Found increment", increment=increment.value)
+        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses")
+
+        body: Stmt = self._statement()
+        if increment:
+            body = BlockStmt([body, ExpressionStmt(increment)])
+
+        if condition is None:
+            condition = LiteralExpr(True)
+        body = WhileStmt(condition, body)
+
+        if initializer:
+            body = BlockStmt([initializer, body])
+        # self.logger.info("Returning for body", body=body)
+        return body
 
     def _print_statement(self) -> Stmt:
         value: Expr = self._expression()
@@ -64,6 +129,16 @@ class Parser:
         self._consume(TokenType.SEMICOLON, "Expect ';' after expression")
 
         return ExpressionStmt(expr)
+
+    def _while_statement(self):
+        self._consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.")
+        condition: Expr = self._expression()
+
+        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after condition")
+
+        body: Stmt = self._statement()
+
+        return WhileStmt(condition, body)
 
     def _expression(self) -> Expr:
         return self._assignment()
@@ -78,9 +153,33 @@ class Parser:
 
         return stmts
 
-    def _assignment(self) -> Expr:
+    def _or(self):
+        expr: Expr = self._and()
+
+        while self._match(TokenType.OR):
+            operator: Token = self._previous()
+
+            right: Expr = self._and()
+
+            expr = LogicalExpr(expr, operator, right)
+
+        return expr
+
+    def _and(self):
         expr: Expr = self._equality()
 
+        while self._match(TokenType.AND):
+            operator: Token = self._previous()
+
+            right: Expr = self._equality()
+
+            expr = LogicalExpr(expr, operator, right)
+
+        return expr
+
+    def _assignment(self) -> Expr:
+        expr: Expr = self._or()
+        # self.logger.info("Got expression in assignment", expr=expr)
         if self._match(TokenType.EQUAL):
             equals: Token = self._previous()
             value: Expr = self._assignment()
@@ -197,11 +296,11 @@ class Parser:
                 case TokenType.VAR:
                     return
                 case TokenType.FOR:
-                    return
+                    return self._for_statement()
                 case TokenType.IF:
-                    return
+                    return self._if_statement()
                 case TokenType.WHILE:
-                    return
+                    return self._while_statement()
                 case TokenType.PRINT:
                     return
                 case TokenType.RETURN:

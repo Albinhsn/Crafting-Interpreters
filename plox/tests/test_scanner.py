@@ -10,9 +10,77 @@ LOGGER = get_logger()
 
 
 def get_tokens(s: str):
-    scanner = Scanner(s, LOGGER)
+    scanner = Scanner(s)
     scanner.scan_tokens()
     return scanner
+
+
+def test_less():
+    scanner = get_tokens("1 < 5")
+    assert scanner.tokens[1].type == TokenType.LESS
+    assert scanner.tokens[1].literal == None
+    assert scanner.tokens[1].lexeme == "<"
+
+
+def test_fibonacci():
+    scanner = get_tokens(
+        """
+var a = 0;
+var temp;
+
+for (var b = 1; a < 5; b = temp + b) {
+  print a;
+  temp = a;
+  a = b;
+}
+
+                         """
+    )
+    assert scanner.tokens[1].literal == "a"
+    assert scanner.tokens[6].literal == "temp"
+    assert scanner.tokens[16].lexeme == TokenType.LESS
+    assert scanner.tokens[16].literal == "temp"
+    assert [i.type.name for i in scanner.tokens] == [
+        "VAR",  # var 1
+        "IDENTIFIER",  # a 2
+        "EQUAL",  # = 3
+        "NUMBER",  # 0 4
+        "SEMICOLON",  # ; 5
+        "VAR",  # var 6
+        "IDENTIFIER",  # temp 7
+        "SEMICOLON",  # ; 8
+        "FOR",  # for 9
+        "LEFT_PAREN",  # ( 10
+        "VAR",  # var 11
+        "IDENTIFIER",  # b 12
+        "EQUAL",  # = 13
+        "NUMBER",  # 1 14
+        "SEMICOLON",  # ; 15
+        "IDENTIFIER",  # a 16
+        "LESS",  # < 17
+        "NUMBER",  # 5
+        "SEMICOLON",  # ;
+        "IDENTIFIER",  # b
+        "EQUAL",  # =
+        "IDENTIFIER",  # temp
+        "PLUS",  # +
+        "IDENTIFIER",  # b
+        "RIGHT_PAREN",  # )
+        "LEFT_BRACE",  # {
+        "PRINT",  # print
+        "IDENTIFIER",  # a
+        "SEMICOLON",  # ;
+        "IDENTIFIER",  # temp
+        "EQUAL",  # =
+        "IDENTIFIER",  # a
+        "SEMICOLON",  # ;
+        "IDENTIFIER",  # a
+        "EQUAL",  # =
+        "IDENTIFIER",  # b
+        "SEMICOLON",  # ;
+        "RIGHT_BRACE",  # }
+        "EOF",  # }
+    ]
 
 
 def test_semi():
@@ -91,29 +159,33 @@ def test_single_chars():
     assert scanner.tokens[14].type == TokenType.EOF
 
 
-# def test_double_chars():
-#     scanner = get_tokens("!===<=>=")
+def test_double_chars():
+    scanner = get_tokens("!===<=>=")
 
-#     assert scanner.tokens[0].type == TokenType.BANG_EQUAL
-#     assert scanner.tokens[1].type == TokenType.EQUAL_EQUAL
-#     assert scanner.tokens[2].type == TokenType.LESS_EQUAL
-#     assert scanner.tokens[3].type == TokenType.GREATER_EQUAL
+    assert scanner.tokens[0].type == TokenType.BANG_EQUAL
+    assert scanner.tokens[1].type == TokenType.EQUAL_EQUAL
+    assert scanner.tokens[2].type == TokenType.LESS_EQUAL
+    assert scanner.tokens[3].type == TokenType.GREATER_EQUAL
+
+    assert scanner.tokens[0].type == TokenType.BANG_EQUAL
+    assert scanner.tokens[1].type == TokenType.EQUAL_EQUAL
+    assert scanner.tokens[2].type == TokenType.LESS_EQUAL
+    assert scanner.tokens[3].type == TokenType.GREATER_EQUAL
 
 
-# def test_numbers():
-#     scanner = get_tokens("1; 1.0; 11.01;")
+def test_numbers():
+    scanner = get_tokens("1; 1.0; 11.01;")
 
-#     assert scanner.tokens[0].type == TokenType.NUMBER
-#     assert str(scanner.tokens[0].literal) == str(1.0)
-#     assert scanner.tokens[1].type == TokenType.SEMICOLON
+    assert scanner.tokens[0].type == TokenType.NUMBER
+    assert str(scanner.tokens[0].literal) == str(1.0)
+    assert scanner.tokens[1].type == TokenType.SEMICOLON
+    assert scanner.tokens[2].type == TokenType.NUMBER
+    assert str(scanner.tokens[2].literal) == str(1.0)
+    assert scanner.tokens[3].type == TokenType.SEMICOLON
 
-#     assert scanner.tokens[2].type == TokenType.NUMBER
-#     assert str(scanner.tokens[2].literal) == str(1.0)
-#     assert scanner.tokens[3].type == TokenType.SEMICOLON
-
-#     assert scanner.tokens[4].type == TokenType.NUMBER
-#     assert scanner.tokens[4].literal == 11.01
-#     assert scanner.tokens[5].type == TokenType.SEMICOLON
+    assert scanner.tokens[4].type == TokenType.NUMBER
+    assert scanner.tokens[4].literal == 11.01
+    assert scanner.tokens[5].type == TokenType.SEMICOLON
 
 
 def test_keywords():
@@ -176,6 +248,7 @@ def test_keywords():
     assert scanner.tokens[21].literal == "while"
 
     assert scanner.tokens[22].type == TokenType.EOF
+
 
 if __name__ == "__main__":
     test_keywords()

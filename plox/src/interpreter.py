@@ -1,10 +1,14 @@
 from typing import Any
+from time import sleep 
 
 from _token import Token
 from environment import Environment
 from expression import (AssignExpr, BinaryExpr, Expr, GroupingExpr,
-                        LiteralExpr, UnaryExpr, VariableExpr, Visitor)
-from stmt import BlockStmt, ExpressionStmt, PrintStmt, Stmt, VarStmt
+                        LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr,
+                        Visitor)
+from log import get_logger
+from stmt import (BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt,
+                  WhileStmt)
 from token_type import TokenType
 
 
@@ -16,10 +20,12 @@ class Interpreter(Visitor):
     def __init__(self, error) -> None:
         self.error = error
         self.environment = Environment()
+        self.logger = get_logger()
 
     def interpret(self, stmts: list[Stmt]):
         try:
             for stmt in stmts:
+                # self.logger.info("Executing stmt", stmt=stmt)
                 self._execute(stmt)
         except LoxRuntimeError as e:
             self.error(e)
@@ -28,7 +34,7 @@ class Interpreter(Visitor):
         stmt.accept(self)
 
     def _stringify(self, obj: Any):
-        if not obj:
+        if obj is None:
             return "nil"
 
         if isinstance(obj, float):
@@ -46,8 +52,16 @@ class Interpreter(Visitor):
         self._evaluate(stmt.expression)
 
     def visit_block_stmt(self, stmt: BlockStmt):
-        self._execute_block(stmt.statements, Environment())
+        self._execute_block(stmt.statements, self.environment)
         return
+
+    def visit_if_stmt(self, stmt: IfStmt):
+        if self._is_truthy(self._evaluate(stmt.condition)):
+            self._execute(stmt.then_branch)
+        elif stmt.else_branch is not None:
+            self._execute((stmt.else_branch))
+
+        return None
 
     def visit_print_stmt(self, stmt: PrintStmt):
         value: Any = self._evaluate(stmt.expression)
@@ -56,14 +70,14 @@ class Interpreter(Visitor):
     def visit_var_stmt(self, stmt: VarStmt):
         value: Any = None
         if stmt.initializer is not None:
+            # self.logger.info("evaluating initializer", init=stmt.initializer)
             value = self._evaluate(stmt.initializer)
-
+            # self.logger.info("got value from initializer", value=value)
         self.environment._define(stmt.name.lexeme, value)
         return None
 
     def visit_assign_expr(self, expr: AssignExpr):
         value: Any = self._evaluate(expr.value)
-
         self.environment._assign(expr.name, value)
         return value
 
@@ -72,6 +86,24 @@ class Interpreter(Visitor):
 
     def visit_variable_expr(self, expr: VariableExpr):
         return self.environment.get(expr.name)
+
+    def visit_logical_expr(self, expr: LogicalExpr):
+        left = self._evaluate(expr.left)
+
+        if expr.operator.type == TokenType.OR:
+            if self._is_truthy(left):
+                return left
+        else:
+            if not self._is_truthy(left):
+                return left
+        return self._evaluate(expr.right)
+
+    def visit_while_stmt(self, stmt: WhileStmt):
+        while self._is_truthy(self._evaluate(stmt.condition)):
+            # self.logger.info("Inside while body", left=self.environment.get(stmt.condition.left.name), cond=stmt.condition.operator.type, right=stmt.condition.right.value)
+            self._execute(stmt.body)
+
+        return None
 
     def visit_unary_expr(self, expr: UnaryExpr):
         right: Any = self._evaluate(expr.right)
@@ -157,11 +189,11 @@ class Interpreter(Visitor):
         previous: Environment = self.environment
         try:
             self.environment = environment
-
             for statement in statements:
                 self._execute(statement)
-        finally:
-            self.environment = previous
+        except Exception:
+            pass
+        self.environment = previous
 
     def _check_number_operands(self, operator: Token, left_operand: Any, right_operand):
         if isinstance(left_operand, float) and isinstance(right_operand, float):

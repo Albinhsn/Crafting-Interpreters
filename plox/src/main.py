@@ -63,7 +63,8 @@ class Lox:
 
     @staticmethod
     def report(line: int, where: str, message: str):
-        print(f"[line {line}] Error {where} : {message}")
+        pass
+        # print(f"[line {line}] Error {where} : {message}")
 
 
 if __name__ == "__main__":

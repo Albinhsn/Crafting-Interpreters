@@ -1,17 +1,21 @@
 from typing import Any, Optional
 
 from _token import Token
+from log import get_logger
 
 
 class Environment:
-    def __init__(self, enclosing = None) -> None:
+    def __init__(self, enclosing=None) -> None:
         self.values: dict = {}
-        self.enclosing = enclosing
+        self.enclosing: Optional[Environment] = enclosing
+        self.logger = get_logger()
 
     def _define(self, name: str, value: Any):
+        # self.logger.info("Defining in env", name=name, value=value)
         self.values[name] = value
 
     def get(self, name: Token):
+        # self.logger.info("Get", name=name.lexeme, values=self.values)
         if name.lexeme in self.values:
             return self.values[name.lexeme]
 
@@ -21,9 +25,9 @@ class Environment:
 
     def _assign(self, name: Token, value: Any):
         if name.lexeme in self.values:
-            values[name.lexeme] = value
+            self.values[name.lexeme] = value
             return
         if self.enclosing:
             self.enclosing._assign(name, value)
             return
-        raise LoxRuntimeError("Undefied variable '" + name.lexeme + "'.")
+        raise Exception("Undefined variable '" + name.lexeme + "'.")

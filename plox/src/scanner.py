@@ -3,17 +3,18 @@ from typing import Any, Optional, Union
 from structlog._config import BoundLoggerLazyProxy
 
 from _token import Token
+from log import get_logger
 from token_type import TokenType
 
 
 class Scanner:
-    def __init__(self, source: str, logger=None) -> None:
+    def __init__(self, source: str) -> None:
         self.source: str = source
         self.tokens = []
         self._start = 0
         self._current = -1
         self._line = 1
-        self._logger: BoundLoggerLazyProxy= logger
+        self.logger: BoundLoggerLazyProxy= get_logger() 
         self.keywords = {
             "and": TokenType.AND,
             "class": TokenType.CLASS,
@@ -38,6 +39,7 @@ class Scanner:
 
     def scan_tokens(self) -> list[Token]:
         while not self._is_at_end():
+            self._start = self._current
             self._scan_token()
 
         self.tokens.append(Token(TokenType.EOF, "", None, self._line))
@@ -126,9 +128,8 @@ class Scanner:
         type: Union[TokenType, None] = self._keyword(txt)
         if not type:
             type = TokenType.IDENTIFIER
-
+        # self.logger.info("Found identifier", txt=txt)
         self._add_token(type, txt)
-
     def _number(self) -> None:
         self._start = self._current
 
@@ -139,18 +140,18 @@ class Scanner:
         while self._is_digit(self._peek()):
             self._advance()
             
-
         if self._peek() == "." and self._is_digit(self._peek_next()):
             # Consume the "."
             self._advance()
 
-            while self._is_digit(self._peek_next()):
+            while self._is_digit(self._peek()):
                 self._advance()
 
-
+        # self.logger.info("Found number", number=self.source[self._start : self._current])
         self._add_token(
             TokenType.NUMBER, float(self.source[self._start : self._current])
         )
+        self._current -= 1
 
     def _string(self) -> None:
         self._advance()
@@ -164,8 +165,8 @@ class Scanner:
         if self._is_at_end():
             raise Exception("Unterminated string")
 
-        value: str = self.source[self._start: self._current+1]
         self._advance()
+        value: str = self.source[self._start: self._current]
         self._add_token(TokenType.STRING, value)
 
     def _peek_next(self) -> str:
@@ -185,7 +186,7 @@ class Scanner:
         return self.source[self._current]
 
     def _add_token(self, type: TokenType, literal: Optional[Any] = None) -> None:
-        txt: str = self.source[self._start : self._current]
+        txt: str = literal if literal else self.source[self._start : self._current]
         self.tokens.append(Token(type, txt, literal, self._line))
 
     def _match(self, expected: str) -> bool:

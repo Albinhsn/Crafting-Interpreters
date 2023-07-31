@@ -21,6 +21,5 @@ def get_logger():
         cache_logger_on_first_use=False,
     )
     log = structlog.get_logger()
-    print(type(log))
     log.info("Initialized logger")
     return log

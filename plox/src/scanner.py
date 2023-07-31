@@ -3,17 +3,18 @@ from typing import Any, Optional, Union
 from structlog._config import BoundLoggerLazyProxy
 
 from _token import Token
+from log import get_logger
 from token_type import TokenType
 
 
 class Scanner:
-    def __init__(self, source: str, logger=None) -> None:
+    def __init__(self, source: str) -> None:
         self.source: str = source
         self.tokens = []
         self._start = 0
         self._current = -1
         self._line = 1
-        self._logger: BoundLoggerLazyProxy= logger
+        self._logger: BoundLoggerLazyProxy= get_logger() 
         self.keywords = {
             "and": TokenType.AND,
             "class": TokenType.CLASS,
@@ -139,7 +140,6 @@ class Scanner:
         while self._is_digit(self._peek()):
             self._advance()
             
-
         if self._peek() == "." and self._is_digit(self._peek_next()):
             # Consume the "."
             self._advance()
@@ -151,6 +151,7 @@ class Scanner:
         self._add_token(
             TokenType.NUMBER, float(self.source[self._start : self._current])
         )
+        self._current -= 1
 
     def _string(self) -> None:
         self._advance()

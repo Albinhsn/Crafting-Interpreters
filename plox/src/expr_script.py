@@ -12,7 +12,8 @@ if __name__ == "__main__":
         "Assign ; name: Token, value: Expr",
         "Binary   ;left: Expr, operator: Token, right: Expr",
         "Grouping ;expression: Expr",
-        "Literal  ;value: dict",
+        "Logical ; left: Expr, operator: Token, right: Expr",
+        "Literal  ;value: Any",
         "Unary    ;operator: Token,right:Expr",
         "Variable ; name: Token",
     ]
@@ -30,7 +31,7 @@ class Visitor(ABC):
     def visit_{class_name}_expr(self, cls):
         pass
 """
-    X = ["var", "print", "expression", "block"]
+    X = ["var", "print", "expression", "block", "if", "while"]
     for i in X:
         s += f"""
     def visit_{i}_stmt(self, cls):

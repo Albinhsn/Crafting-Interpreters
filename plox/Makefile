@@ -5,4 +5,4 @@ test_suite:
 
 
 run: 
-	pipenv run python3 ./src/main.py $(file)
+	pipenv run python3 ./src/main.py input

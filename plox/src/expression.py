@@ -28,6 +28,9 @@ class Visitor(ABC):
     def visit_variable_expr(self, cls):
         pass
 
+    def visit_call_expr(self, cls):
+        pass
+
     def visit_var_stmt(self, cls):
         pass
 
@@ -44,6 +47,9 @@ class Visitor(ABC):
         pass
 
     def visit_while_stmt(self, cls):
+        pass
+
+    def visit_function_stmt(self, cls):
         pass
 
 
@@ -112,3 +118,13 @@ class VariableExpr(Expr, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_variable_expr(self)
+
+
+class CallExpr(Expr, Visitor):
+    def __init__(self, callee: Expr, paren: Token, arguments: list[Expr]):
+        self.callee: Expr = callee
+        self.paren: Token = paren
+        self.arguments: list[Expr] = arguments
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_call_expr(self)

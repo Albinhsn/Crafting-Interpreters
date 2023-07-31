@@ -1,4 +1,5 @@
 from typing import Any, Optional, Union
+from log import get_logger
 
 from structlog._config import BoundLoggerLazyProxy
 
@@ -53,7 +54,7 @@ class Scanner:
         c: str = self._advance()
         match c:
             case "(":
-                self._add_token(TokenType.LEFT_PAREN)
+                self._add_token(TokenType.LEFT_PAREN, "(")
             case ")":
                 self._add_token(TokenType.RIGHT_PAREN)
             case "{":
@@ -61,7 +62,8 @@ class Scanner:
             case "}":
                 self._add_token(TokenType.RIGHT_BRACE)
             case ",":
-                self._add_token(TokenType.COMMA)
+                # self.logger.info("GOT")
+                self._add_token(TokenType.COMMA, ",")
             case ".":
                 self._add_token(TokenType.DOT)
             case "-":
@@ -74,26 +76,26 @@ class Scanner:
                 self._add_token(TokenType.STAR)
             case "!":
                 self._add_token(
-                    TokenType.BANG_EQUAL if self._match("=") else TokenType.BANG
+                    TokenType.BANG_EQUAL if self._match("=") else TokenType.BANG, "!"
                 )
             case "=":
                 self._add_token(
-                    TokenType.EQUAL_EQUAL if self._match("=") else TokenType.EQUAL
+                    TokenType.EQUAL_EQUAL if self._match("=") else TokenType.EQUAL, "="
                 )
             case "<":
                 self._add_token(
-                    TokenType.LESS_EQUAL if self._match("=") else TokenType.LESS
+                    TokenType.LESS_EQUAL if self._match("=") else TokenType.LESS, "<"
                 )
             case ">":
                 self._add_token(
-                    TokenType.GREATER_EQUAL if self._match("=") else TokenType.GREATER
+                    TokenType.GREATER_EQUAL if self._match("=") else TokenType.GREATER, ">"
                 )
             case "/":
                 if self._match("/"):
                     while self._peek() != "\n" and not self._is_at_end():
                         self._advance()
                 else:
-                    self._add_token(TokenType.SLASH)
+                    self._add_token(TokenType.SLASH, "/")
             case " ":
                 pass
             case "\r":

@@ -17,6 +17,7 @@ if __name__ == "__main__":
         "While ; condition:Expr, body:Stmt",
         "Block ; statements: list[Stmt]",
         "If ; condition : Expr, then_branch : Stmt, else_branch: Stmt",
+        "Function ; name: Token, params: list[Token], body:list[Stmt]",
     ]
     k = """from abc import ABC
 from typing import Any

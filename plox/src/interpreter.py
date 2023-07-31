@@ -1,14 +1,15 @@
+from time import sleep
 from typing import Any
-from time import sleep 
 
 from _token import Token
 from environment import Environment
-from expression import (AssignExpr, BinaryExpr, Expr, GroupingExpr,
+from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr,
                         LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr,
                         Visitor)
 from log import get_logger
-from stmt import (BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt,
-                  WhileStmt)
+from loxcallable import Clock, LoxCallable, LoxFunction
+from stmt import (BlockStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt,
+                  Stmt, VarStmt, WhileStmt)
 from token_type import TokenType
 
 
@@ -20,7 +21,10 @@ class Interpreter(Visitor):
     def __init__(self, error) -> None:
         self.error = error
         self.environment = Environment()
+        self.globals = Environment()
         self.logger = get_logger()
+
+        self.globals._define("clock", Clock())
 
     def interpret(self, stmts: list[Stmt]):
         try:
@@ -55,6 +59,11 @@ class Interpreter(Visitor):
         self._execute_block(stmt.statements, self.environment)
         return
 
+    def visit_function_stmt(self, stmt: FunctionStmt):
+        function = LoxFunction(stmt)
+        self.environment._define(stmt.name.lexeme, function)
+        return None
+
     def visit_if_stmt(self, stmt: IfStmt):
         if self._is_truthy(self._evaluate(stmt.condition)):
             self._execute(stmt.then_branch)
@@ -70,11 +79,13 @@ class Interpreter(Visitor):
     def visit_var_stmt(self, stmt: VarStmt):
         value: Any = None
         if stmt.initializer is not None:
-            # self.logger.info("evaluating initializer", init=stmt.initializer)
             value = self._evaluate(stmt.initializer)
-            # self.logger.info("got value from initializer", value=value)
         self.environment._define(stmt.name.lexeme, value)
         return None
+
+    def visit_while_stmt(self, stmt: WhileStmt):
+        while self._is_truthy(self._evaluate(stmt.condition)):
+            self._execute(stmt.body)
 
     def visit_assign_expr(self, expr: AssignExpr):
         value: Any = self._evaluate(expr.value)
@@ -100,10 +111,24 @@ class Interpreter(Visitor):
 
     def visit_while_stmt(self, stmt: WhileStmt):
         while self._is_truthy(self._evaluate(stmt.condition)):
-            # self.logger.info("Inside while body", left=self.environment.get(stmt.condition.left.name), cond=stmt.condition.operator.type, right=stmt.condition.right.value)
             self._execute(stmt.body)
 
-        return None
+    def visit_call_expr(self, expr: CallExpr):
+        callee: Any = self._evaluate(expr.callee)
+        arguments: list[Any] = [self._evaluate(argument) for argument in expr.arguments]
+
+        if not isinstance(callee, LoxCallable):
+            self.error(expr.paren, "Can only call functions and classes")
+            raise LoxRuntimeError("Trying to call non function")
+
+        function: LoxCallable = callee
+
+        if len(arguments) != function._arity():
+            raise LoxRuntimeError(
+                f"Expected {function._arity()} arguments but got {len(arguments)}."
+            )
+
+        return function._call(self, arguments)
 
     def visit_unary_expr(self, expr: UnaryExpr):
         right: Any = self._evaluate(expr.right)

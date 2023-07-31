@@ -2,11 +2,11 @@ import time
 from typing import Any, Union
 
 from _token import Token
-from expression import (AssignExpr, BinaryExpr, Expr, GroupingExpr,
+from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr,
                         LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr)
 from log import get_logger
 from stmt import (BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt,
-                  WhileStmt)
+                  WhileStmt, FunctionStmt)
 from token_type import TokenType
 
 
@@ -30,12 +30,41 @@ class Parser:
 
     def _declaration(self) -> Stmt:
         try:
+            # self.logger.info("Declaration,trying to find", type=self.tokens[self._current].type)
+            if self._match(TokenType.FUN):
+                return self._function("function")
             if self._match(TokenType.VAR):
                 return self._var_declaration()
             return self._statement()
         except ParseError:
             self._synchronize()
             return None
+
+    def _function(self, kind:str):
+        # self.logger.info("parsing function", peek=self._peek())
+        name:Token = self._consume(TokenType.IDENTIFIER, "Expect " + kind + " name.")
+        # self.logger.info("COnsumed ident?", name=name)
+        self._consume(TokenType.LEFT_PAREN, f"Expect '(' after {kind} name")
+        
+        parameters : list[Token] = []
+
+        if not self._check(TokenType.RIGHT_PAREN):
+            # Lords loop
+            flag = True 
+            while flag or self._match(TokenType.COMMA):
+
+                parameters.append(self._consume(TokenType.IDENTIFIER, "Expect parameter name"))
+                flag = False
+
+        # self.logger.info("Params parsed?", params=len(parameters))
+        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters")
+
+        self._consume(TokenType.LEFT_BRACE, "Expect '{' before" +f" {kind} body")
+        # self.logger.info("Consumed right_paren and left_brace?", )
+
+        body = self._block()
+        # self.logger.info("Returning func", name=name, parameters=parameters, body=body)
+        return FunctionStmt(name, parameters, body)
 
     def _var_declaration(self):
         name: Token = self._consume(TokenType.IDENTIFIER, "Expect variable name")
@@ -250,7 +279,36 @@ class Parser:
             right: Expr = self._unary()
             return UnaryExpr(operator, right)
 
-        return self._primary()
+        return self._call()
+
+    def _call(self) -> Expr:
+        expr: Expr = self._primary()
+
+        while True:
+            if self._match(TokenType.LEFT_PAREN):
+                # self.logger.info("Matched LEFT_PAREN in call")
+                expr = self._finish_call(expr)
+            else:
+                break
+
+        return expr
+
+    def _finish_call(self, callee: Expr):
+        arguments: list[Expr] = []
+
+        if not self._check(TokenType.RIGHT_PAREN):
+            # Can't do the lords loop
+            flag = True 
+            while flag or self._match(TokenType.COMMA):
+                flag = False
+                arguments.append(self._expression())
+
+                if len(arguments) >= 255:
+                    self.error(self._peek(), "Why u gotta have that many arguments for")
+        paren: Token = self._consume(
+            TokenType.RIGHT_PAREN, "Expect ')' after arguments"
+        )
+        return CallExpr(callee, paren, arguments)
 
     def _primary(self) -> Expr:
         if self._match(TokenType.FALSE):
@@ -266,13 +324,17 @@ class Parser:
             return LiteralExpr(self._previous().literal)
 
         if self._match(TokenType.IDENTIFIER):
+            # self.logger.info("Should be here", varexpr= self._previous().literal, next=self.tokens[self._current].lexeme, next_type=self.tokens[self._current].type)
             return VariableExpr(self._previous())
 
         if self._match(TokenType.LEFT_PAREN):
+            # self.logger.info("Matched left_paren")
             expr: Expr = self._expression()
             self._consume(TokenType.RIGHT_PAREN, "Expect ')' after expression")
             return GroupingExpr(expr)
         self._error(self._peek(), "Expect expression")
+        # self.logger.info("Raising", current=self.tokens[self._current].literal,type=self.tokens[self._current].type)
+        # self.logger.info("tokens", token_type=[i.type.name for i in self.tokens])
 
     def _consume(self, type: TokenType, msg: str):
         if self._check(type):

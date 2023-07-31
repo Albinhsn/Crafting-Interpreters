@@ -10,12 +10,10 @@ class Environment:
         self.enclosing: Optional[Environment] = enclosing
         self.logger = get_logger()
 
-    def _define(self, name: str, value: Any):
-        # self.logger.info("Defining in env", name=name, value=value)
+    def _define(self, name: str, value: Any) -> None:
         self.values[name] = value
 
     def get(self, name: Token):
-        # self.logger.info("Get", name=name.lexeme, values=self.values)
         if name.lexeme in self.values:
             return self.values[name.lexeme]
 

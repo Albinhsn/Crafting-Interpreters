@@ -60,3 +60,13 @@ class IfStmt(Stmt, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_if_stmt(self)
+
+
+class FunctionStmt(Stmt, Visitor):
+    def __init__(self, name: Token, params: list[Token], body: list[Stmt]):
+        self.name: Token = name
+        self.params: list[Token] = params
+        self.body: list[Stmt] = body
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_function_stmt(self)

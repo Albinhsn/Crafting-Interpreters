@@ -18,7 +18,48 @@ def get_tokens(s: str):
 def test_less():
     scanner = get_tokens("1 < 5")
     assert scanner.tokens[1].type == TokenType.LESS
-    assert scanner.tokens[1].literal == None
+    assert scanner.tokens[1].literal == "<" 
+
+
+def test_func():
+    scanner = get_tokens('sayHi("Dear", "Reader");')
+    assert [i.type.name for i in scanner.tokens] == [
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "STRING",
+        "COMMA",
+        "STRING",
+        "RIGHT_PAREN",
+        "SEMICOLON",
+        "EOF",
+    ]
+    assert scanner.tokens[0].literal == "sayHi"
+    assert scanner.tokens[0].lexeme == "sayHi"
+    assert scanner.tokens[0].type == TokenType.IDENTIFIER
+
+    assert scanner.tokens[1].literal == "("
+    assert scanner.tokens[1].lexeme == "("
+    assert scanner.tokens[1].type == TokenType.LEFT_PAREN
+
+    assert scanner.tokens[2].literal == "Dear"
+    assert scanner.tokens[2].lexeme == "Dear"
+    assert scanner.tokens[2].type == TokenType.STRING
+
+    assert scanner.tokens[3].type == TokenType.COMMA
+    assert scanner.tokens[3].literal == ","
+    assert scanner.tokens[3].lexeme == ","
+
+    assert scanner.tokens[4].literal == "Reader"
+    assert scanner.tokens[4].lexeme == "Reader"
+    assert scanner.tokens[4].type == TokenType.STRING
+
+
+def test_lexeme():
+    scanner = get_tokens("a < 5")
+    assert scanner.tokens[0].literal == "a"
+    assert scanner.tokens[0].lexeme == "a"
+
+    assert scanner.tokens[1].literal == "<"
     assert scanner.tokens[1].lexeme == "<"
 
 
@@ -38,8 +79,6 @@ for (var b = 1; a < 5; b = temp + b) {
     )
     assert scanner.tokens[1].literal == "a"
     assert scanner.tokens[6].literal == "temp"
-    assert scanner.tokens[16].lexeme == TokenType.LESS
-    assert scanner.tokens[16].literal == "temp"
     assert [i.type.name for i in scanner.tokens] == [
         "VAR",  # var 1
         "IDENTIFIER",  # a 2

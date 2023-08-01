@@ -15,10 +15,184 @@ def get_tokens(s: str):
     return scanner
 
 
+def test_rec_fib():
+    scanner = get_tokens(
+        """
+fun fib(n) {
+  if (n < 2) return n;
+  return fib(n - 2) + fib(n - 1);
+}
+
+for (var i = 0; i < 20; i = i + 1) {
+  print fib(i);
+}
+"""
+    )
+    assert [i.lexeme for i in scanner.tokens] == [
+        "fun",
+        "fib",
+        "(",
+        "n",
+        ")",
+        "{",
+        "if",
+        "(",
+        "n",
+        "<",
+        2.0,
+        ")",
+        "return",
+        "n",
+        ";",
+        "return",
+        "fib",
+        "(",
+        "n",
+        "-",
+        2.0,
+        ")",
+        "+",
+        "fib",
+        "(",
+        "n",
+        "-",
+        1.0,
+        ")",
+        ";",
+        "}",
+        "for",
+        "(",
+        "var",
+        "i",
+        "=",
+        0,
+        ";",
+        "i",
+        "<",
+        20.0,
+        ";",
+        "i",
+        "=",
+        "i",
+        "+",
+        1.0,
+        ")",
+        "{",
+        "print",
+        "fib",
+        "(",
+        "i",
+        ")",
+        ";",
+        "}",
+        "",
+    ]
+    assert [i.type.name for i in scanner.tokens] == [
+        "FUN",
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "RIGHT_PAREN",
+        "LEFT_BRACE",
+        "IF",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "LESS",
+        "NUMBER",
+        "RIGHT_PAREN",
+        "RETURN",
+        "IDENTIFIER",
+        "SEMICOLON",
+        "RETURN",
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "MINUS",
+        "NUMBER",
+        "RIGHT_PAREN",
+        "PLUS",
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "MINUS",
+        "NUMBER",
+        "RIGHT_PAREN",
+        "SEMICOLON",
+        "RIGHT_BRACE",
+        "FOR",
+        "LEFT_PAREN",
+        "VAR",
+        "IDENTIFIER",
+        "EQUAL",
+        "NUMBER",
+        "SEMICOLON",
+        "IDENTIFIER",
+        "LESS",
+        "NUMBER",
+        "SEMICOLON",
+        "IDENTIFIER",
+        "EQUAL",
+        "IDENTIFIER",
+        "PLUS",
+        "NUMBER",
+        "RIGHT_PAREN",
+        "LEFT_BRACE",
+        "PRINT",
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "RIGHT_PAREN",
+        "SEMICOLON",
+        "RIGHT_BRACE",
+        "EOF",
+    ]
+
+
 def test_less():
     scanner = get_tokens("1 < 5")
     assert scanner.tokens[1].type == TokenType.LESS
-    assert scanner.tokens[1].literal == None
+    assert scanner.tokens[1].literal == "<"
+
+
+def test_func():
+    scanner = get_tokens('sayHi("Dear", "Reader");')
+    assert [i.type.name for i in scanner.tokens] == [
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "STRING",
+        "COMMA",
+        "STRING",
+        "RIGHT_PAREN",
+        "SEMICOLON",
+        "EOF",
+    ]
+    assert scanner.tokens[0].literal == "sayHi"
+    assert scanner.tokens[0].lexeme == "sayHi"
+    assert scanner.tokens[0].type == TokenType.IDENTIFIER
+
+    assert scanner.tokens[1].literal == "("
+    assert scanner.tokens[1].lexeme == "("
+    assert scanner.tokens[1].type == TokenType.LEFT_PAREN
+
+    assert scanner.tokens[2].literal == "Dear"
+    assert scanner.tokens[2].lexeme == "Dear"
+    assert scanner.tokens[2].type == TokenType.STRING
+
+    assert scanner.tokens[3].type == TokenType.COMMA
+    assert scanner.tokens[3].literal == ","
+    assert scanner.tokens[3].lexeme == ","
+
+    assert scanner.tokens[4].literal == "Reader"
+    assert scanner.tokens[4].lexeme == "Reader"
+    assert scanner.tokens[4].type == TokenType.STRING
+
+
+def test_lexeme():
+    scanner = get_tokens("a < 5")
+    assert scanner.tokens[0].literal == "a"
+    assert scanner.tokens[0].lexeme == "a"
+
+    assert scanner.tokens[1].literal == "<"
     assert scanner.tokens[1].lexeme == "<"
 
 
@@ -38,8 +212,6 @@ for (var b = 1; a < 5; b = temp + b) {
     )
     assert scanner.tokens[1].literal == "a"
     assert scanner.tokens[6].literal == "temp"
-    assert scanner.tokens[16].lexeme == TokenType.LESS
-    assert scanner.tokens[16].literal == "temp"
     assert [i.type.name for i in scanner.tokens] == [
         "VAR",  # var 1
         "IDENTIFIER",  # a 2

@@ -28,6 +28,9 @@ class Visitor(ABC):
     def visit_variable_expr(self, cls):
         pass
 
+    def visit_call_expr(self, cls):
+        pass
+
     def visit_var_stmt(self, cls):
         pass
 
@@ -44,6 +47,12 @@ class Visitor(ABC):
         pass
 
     def visit_while_stmt(self, cls):
+        pass
+
+    def visit_function_stmt(self, cls):
+        pass
+
+    def visit_return_stmt(self, cls):
         pass
 
 
@@ -79,14 +88,6 @@ class GroupingExpr(Expr, Visitor):
         return visitor.visit_grouping_expr(self)
 
 
-class LiteralExpr(Expr, Visitor):
-    def __init__(self, value: Any):
-        self.value: Any = value
-
-    def accept(self, visitor: Visitor):
-        return visitor.visit_literal_expr(self)
-
-
 class LogicalExpr(Expr, Visitor):
     def __init__(self, left: Expr, operator: Token, right: Expr):
         self.left: Expr = left
@@ -95,6 +96,14 @@ class LogicalExpr(Expr, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_logical_expr(self)
+
+
+class LiteralExpr(Expr, Visitor):
+    def __init__(self, value: Any):
+        self.value: Any = value
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_literal_expr(self)
 
 
 class UnaryExpr(Expr, Visitor):
@@ -112,3 +121,13 @@ class VariableExpr(Expr, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_variable_expr(self)
+
+
+class CallExpr(Expr, Visitor):
+    def __init__(self, callee: Expr, paren: Token, arguments: list[Expr]):
+        self.callee: Expr = callee
+        self.paren: Token = paren
+        self.arguments: list[Expr] = arguments
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_call_expr(self)

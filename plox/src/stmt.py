@@ -3,6 +3,7 @@ from typing import Any
 
 from _token import Token
 from expression import Expr, Visitor
+from log import get_logger
 
 
 class Stmt(ABC):
@@ -24,6 +25,15 @@ class PrintStmt(Stmt, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_print_stmt(self)
+
+
+class ReturnStmt(Stmt, Visitor):
+    def __init__(self, keyword: Token, value: Expr):
+        self.keyword: Token = keyword
+        self.value: Expr = value
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_return_stmt(self)
 
 
 class VarStmt(Stmt, Visitor):
@@ -60,3 +70,13 @@ class IfStmt(Stmt, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_if_stmt(self)
+
+
+class FunctionStmt(Stmt, Visitor):
+    def __init__(self, name: Token, params: list[Token], body: list[Stmt]):
+        self.name: Token = name
+        self.params: list[Token] = params
+        self.body: list[Stmt] = body
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_function_stmt(self)

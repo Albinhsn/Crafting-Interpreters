@@ -16,6 +16,7 @@ if __name__ == "__main__":
         "Literal  ;value: Any",
         "Unary    ;operator: Token,right:Expr",
         "Variable ; name: Token",
+        "Call ; callee : Expr, paren : Token, arguments : list[Expr]",
     ]
     k = f"""from abc import ABC
 from typing import Any
@@ -31,7 +32,7 @@ class Visitor(ABC):
     def visit_{class_name}_expr(self, cls):
         pass
 """
-    X = ["var", "print", "expression", "block", "if", "while"]
+    X = ["var", "print", "expression", "block", "if", "while", "function", "return"]
     for i in X:
         s += f"""
     def visit_{i}_stmt(self, cls):

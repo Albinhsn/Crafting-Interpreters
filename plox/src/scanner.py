@@ -1,4 +1,5 @@
 from typing import Any, Optional, Union
+from log import get_logger
 
 from structlog._config import BoundLoggerLazyProxy
 
@@ -53,47 +54,48 @@ class Scanner:
         c: str = self._advance()
         match c:
             case "(":
-                self._add_token(TokenType.LEFT_PAREN)
+                self._add_token(TokenType.LEFT_PAREN, "(")
             case ")":
-                self._add_token(TokenType.RIGHT_PAREN)
+                self._add_token(TokenType.RIGHT_PAREN, ")")
             case "{":
-                self._add_token(TokenType.LEFT_BRACE)
+                self._add_token(TokenType.LEFT_BRACE, "{")
             case "}":
-                self._add_token(TokenType.RIGHT_BRACE)
+                self._add_token(TokenType.RIGHT_BRACE, "}")
             case ",":
-                self._add_token(TokenType.COMMA)
+                # self.logger.info("GOT")
+                self._add_token(TokenType.COMMA, ",")
             case ".":
                 self._add_token(TokenType.DOT)
             case "-":
-                self._add_token(TokenType.MINUS)
+                self._add_token(TokenType.MINUS, "-")
             case "+":
-                self._add_token(TokenType.PLUS)
+                self._add_token(TokenType.PLUS, "+")
             case ";":
-                self._add_token(TokenType.SEMICOLON)
+                self._add_token(TokenType.SEMICOLON, ";")
             case "*":
                 self._add_token(TokenType.STAR)
             case "!":
                 self._add_token(
-                    TokenType.BANG_EQUAL if self._match("=") else TokenType.BANG
+                    TokenType.BANG_EQUAL if self._match("=") else TokenType.BANG, "!"
                 )
             case "=":
                 self._add_token(
-                    TokenType.EQUAL_EQUAL if self._match("=") else TokenType.EQUAL
+                    TokenType.EQUAL_EQUAL if self._match("=") else TokenType.EQUAL, "="
                 )
             case "<":
                 self._add_token(
-                    TokenType.LESS_EQUAL if self._match("=") else TokenType.LESS
+                    TokenType.LESS_EQUAL if self._match("=") else TokenType.LESS, "<"
                 )
             case ">":
                 self._add_token(
-                    TokenType.GREATER_EQUAL if self._match("=") else TokenType.GREATER
+                    TokenType.GREATER_EQUAL if self._match("=") else TokenType.GREATER, ">"
                 )
             case "/":
                 if self._match("/"):
                     while self._peek() != "\n" and not self._is_at_end():
                         self._advance()
                 else:
-                    self._add_token(TokenType.SLASH)
+                    self._add_token(TokenType.SLASH, "/")
             case " ":
                 pass
             case "\r":
@@ -186,7 +188,7 @@ class Scanner:
         return self.source[self._current]
 
     def _add_token(self, type: TokenType, literal: Optional[Any] = None) -> None:
-        txt: str = literal if literal else self.source[self._start : self._current]
+        txt: str = literal if literal is not None else self.source[self._start : self._current]
         self.tokens.append(Token(type, txt, literal, self._line))
 
     def _match(self, expected: str) -> bool:

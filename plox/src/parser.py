@@ -2,11 +2,11 @@ import time
 from typing import Any, Union
 
 from _token import Token
-from expression import (AssignExpr, BinaryExpr, Expr, GroupingExpr,
+from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr,
                         LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr)
 from log import get_logger
-from stmt import (BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt,
-                  WhileStmt)
+from stmt import (BlockStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt,
+                  ReturnStmt, Stmt, VarStmt, WhileStmt)
 from token_type import TokenType
 
 
@@ -30,6 +30,9 @@ class Parser:
 
     def _declaration(self) -> Stmt:
         try:
+            # self.logger.info("Declaration,trying to find", type=self.tokens[self._current].type)
+            if self._match(TokenType.FUN):
+                return self._function("function")
             if self._match(TokenType.VAR):
                 return self._var_declaration()
             return self._statement()
@@ -37,30 +40,58 @@ class Parser:
             self._synchronize()
             return None
 
+    def _function(self, kind: str):
+        name: Token = self._consume(TokenType.IDENTIFIER, "Expect " + kind + " name.")
+        self._consume(TokenType.LEFT_PAREN, f"Expect '(' after {kind} name")
+
+        parameters: list[Token] = []
+
+        if not self._check(TokenType.RIGHT_PAREN):
+            # Lords loop
+            flag = True
+            while flag or self._match(TokenType.COMMA):
+                parameters.append(
+                    self._consume(TokenType.IDENTIFIER, "Expect parameter name")
+                )
+                flag = False
+
+        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters")
+
+        self._consume(TokenType.LEFT_BRACE, "Expect '{' before" + f" {kind} body")
+
+        body = self._block()
+        return FunctionStmt(name, parameters, body)
+
     def _var_declaration(self):
         name: Token = self._consume(TokenType.IDENTIFIER, "Expect variable name")
-        # self.logger.info("Consumed identifier", name=name.lexeme)
 
         initializer: Expr = None
 
         if self._match(TokenType.EQUAL):
-            # self.logger.info("Found equal in var_declaration")
             initializer = self._expression()
-            # self.logger.info("Got init", init=initializer.value)
 
         self._consume(TokenType.SEMICOLON, "Expect ';' after variable declaration")
-        # self.logger.info("Returning var stmt", name=name.literal, init=initializer.value)
         return VarStmt(name, initializer)
 
     def _statement(self):
         if self._match(TokenType.FOR):
-            # self.logger.info("Found for")
             return self._for_statement()
         if self._match(TokenType.PRINT):
             return self._print_statement()
+        if self._match(TokenType.RETURN):
+            return self._return_statement()
         if self._match(TokenType.LEFT_BRACE):
             return BlockStmt(self._block())
+        if self._match(TokenType.IF):
+            return self._if_statement()
         return self._expression_statement()
+
+    def _return_statement(self):
+        keyword: Token = self._previous()
+        value: Expr = None
+        if not self._check(TokenType.SEMICOLON):
+            value = self._expression()
+        return ReturnStmt(keyword, value)
 
     def _if_statement(self):
         self._consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.")
@@ -90,19 +121,15 @@ class Parser:
         else:
             initializer = self._expression_statement()
 
-        # self.logger.info("Found init", init=initializer)
         condition: Expr = None
         if not self._check(TokenType.SEMICOLON):
             condition = self._expression()
 
-
         self._consume(TokenType.SEMICOLON, "Expect ';' after loop condition")
 
-        # self.logger.info("Found condition", condition=condition)
         increment: Expr = None
         if not self._check(TokenType.RIGHT_PAREN):
             increment = self._expression()
-        # self.logger.info("Found increment", increment=increment.value)
         self._consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses")
 
         body: Stmt = self._statement()
@@ -115,7 +142,6 @@ class Parser:
 
         if initializer:
             body = BlockStmt([initializer, body])
-        # self.logger.info("Returning for body", body=body)
         return body
 
     def _print_statement(self) -> Stmt:
@@ -179,7 +205,6 @@ class Parser:
 
     def _assignment(self) -> Expr:
         expr: Expr = self._or()
-        # self.logger.info("Got expression in assignment", expr=expr)
         if self._match(TokenType.EQUAL):
             equals: Token = self._previous()
             value: Expr = self._assignment()
@@ -198,8 +223,9 @@ class Parser:
         while self._match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL):
             operator: Token = self._previous()
             right: Expr = self._comparison()
-
+            
             expr = BinaryExpr(expr, operator, right)
+
 
         return expr
 
@@ -224,7 +250,7 @@ class Parser:
         while self._match(TokenType.MINUS, TokenType.PLUS):
             operator: Token = self._previous()
             right: Expr = self._factor()
-
+            # self.logger.info("Minus term", left=expr, right=right)
             expr = BinaryExpr(expr, operator, right)
 
         return expr
@@ -250,7 +276,35 @@ class Parser:
             right: Expr = self._unary()
             return UnaryExpr(operator, right)
 
-        return self._primary()
+        return self._call()
+
+    def _call(self) -> Expr:
+        expr: Expr = self._primary()
+
+        while True:
+            if self._match(TokenType.LEFT_PAREN):
+                expr = self._finish_call(expr)
+            else:
+                break
+
+        return expr
+
+    def _finish_call(self, callee: Expr):
+        arguments: list[Expr] = []
+
+        if not self._check(TokenType.RIGHT_PAREN):
+            # Can't do the lords loop aka do while
+            flag = True
+            while flag or self._match(TokenType.COMMA):
+                flag = False
+                arguments.append(self._expression())
+
+                if len(arguments) >= 255:
+                    self.error(self._peek(), "Why u gotta have that many arguments for")
+        paren: Token = self._consume(
+            TokenType.RIGHT_PAREN, "Expect ')' after arguments"
+        )
+        return CallExpr(callee, paren, arguments)
 
     def _primary(self) -> Expr:
         if self._match(TokenType.FALSE):

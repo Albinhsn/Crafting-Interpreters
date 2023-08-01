@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 
 from _token import Token
@@ -21,6 +23,19 @@ class Environment:
             return self.enclosing.get(name)
         raise Exception(name, "Undefined variable '" + name.lexeme + "'.")
 
+    def get_at(self, distance: int, name: str) -> Any:
+        return self.__ancestor(distance).values.get(name)
+
+    def ancestor(self, distance: int) -> Environment:
+        environment: Environment = self
+        for _ in range(distance):
+            enclosing = environment.enclosing
+            if not enclosing:
+                raise Exception("No ancestor")
+            environment = enclosing
+
+        return environment
+
     def _assign(self, name: Token, value: Any):
         if name.lexeme in self.values:
             self.values[name.lexeme] = value
@@ -29,3 +44,6 @@ class Environment:
             self.enclosing._assign(name, value)
             return
         raise Exception("Undefined variable '" + name.lexeme + "'.")
+
+    def __assign_at(self, distance: int, name: Token, value: Any) -> None:
+        self.ancestor(distance).values[name.lexeme] = value

@@ -3,7 +3,6 @@ from typing import Any
 
 from _token import Token
 from expression import Expr, Visitor
-from log import get_logger
 
 
 class Stmt(ABC):
@@ -80,3 +79,12 @@ class FunctionStmt(Stmt, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_function_stmt(self)
+
+
+class ClassStmt(Stmt, Visitor):
+    def __init__(self, name: Token, methods: list[Stmt]):
+        self.name: Token = name
+        self.methods: list[Stmt] = methods
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_class_stmt(self)

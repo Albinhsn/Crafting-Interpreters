@@ -5,8 +5,8 @@ from _token import Token
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr,
                         LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr)
 from log import get_logger
-from stmt import (BlockStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt,
-                  ReturnStmt, Stmt, VarStmt, WhileStmt)
+from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
+                  PrintStmt, ReturnStmt, Stmt, VarStmt, WhileStmt)
 from token_type import TokenType
 
 
@@ -30,7 +30,9 @@ class Parser:
 
     def _declaration(self) -> Stmt:
         try:
-            # self.logger.info("Declaration,trying to find", type=self.tokens[self._current].type)
+            self.logger.info("Declaration,trying to find", type=self.tokens[self._current].type)
+            if self._match(TokenType.CLASS):
+                return self.__class_declaration()
             if self._match(TokenType.FUN):
                 return self._function("function")
             if self._match(TokenType.VAR):
@@ -39,6 +41,18 @@ class Parser:
         except ParseError:
             self._synchronize()
             return None
+
+    def __class_declaration(self) -> Stmt:
+        name: Token = self._consume(TokenType.IDENTIFIER, "Expect class name.")
+        self._consume(TokenType.LEFT_BRACE, "Expect '{' before class body")
+
+        methods: list[Stmt] = []
+        while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end():
+            methods.append(self._function("method"))
+
+        self._consume(TokenType.RIGHT_BRACE, "Expect '}' after class body")
+        self.logger.info("Returning class", name=name.lexeme)
+        return ClassStmt(name, methods)
 
     def _function(self, kind: str):
         name: Token = self._consume(TokenType.IDENTIFIER, "Expect " + kind + " name.")
@@ -91,6 +105,7 @@ class Parser:
         value: Expr = None
         if not self._check(TokenType.SEMICOLON):
             value = self._expression()
+        self._consume(TokenType.SEMICOLON, "Expected semicolon after return statement")
         return ReturnStmt(keyword, value)
 
     def _if_statement(self):
@@ -223,9 +238,8 @@ class Parser:
         while self._match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL):
             operator: Token = self._previous()
             right: Expr = self._comparison()
-            
-            expr = BinaryExpr(expr, operator, right)
 
+            expr = BinaryExpr(expr, operator, right)
 
         return expr
 

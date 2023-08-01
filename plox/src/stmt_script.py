@@ -15,14 +15,14 @@ if __name__ == "__main__":
         "Var ; name:Token, initializer:Expr",
         "While ; condition:Expr, body:Stmt",
         "Block ; statements: list[Stmt]",
+        "Class ; name:Token, superclass:VariableExpr, methods:list[FunctionStmt]",
         "If ; condition : Expr, then_branch : Stmt, else_branch: Stmt",
         "Function ; name: Token, params: list[Token], body:list[Stmt]",
-        "Class ; name: Token, methods: list[FunctionStmt]",
     ]
     k = """from abc import ABC
 from typing import Any
 from _token import Token
-from expression import Expr, Visitor
+from expression import Expr, Visitor, VariableExpr
 
 class Stmt(ABC):
     def accept(self, a: Any):

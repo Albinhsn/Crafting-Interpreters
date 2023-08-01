@@ -4,7 +4,7 @@ from typing import Union
 from _token import Token
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
                         GroupingExpr, LiteralExpr, LogicalExpr, SetExpr,
-                        ThisExpr, UnaryExpr, VariableExpr, Visitor)
+                        SuperExpr, ThisExpr, UnaryExpr, VariableExpr, Visitor)
 from log import get_logger
 from stack import Stack
 from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
@@ -21,6 +21,7 @@ class FunctionType(enum.Enum):
 class ClassType(enum.Enum):
     NONE = 1
     CLASS = 2
+    SUBCLASS = 3
 
 
 class Resolver(Visitor):
@@ -62,6 +63,17 @@ class Resolver(Visitor):
         self.__declare(stmt.name)
         self.__define(stmt.name)
 
+        if stmt.superclass and stmt.superclass.name.lexeme == stmt.name.lexeme:
+            self.error(stmt.superclass.name.lexeme, "A class can't inherit from itself")
+
+        if stmt.superclass:
+            self._current_class = ClassType.SUBCLASS
+            self.resolve(stmt.superclass)
+
+        if stmt.superclass is not None:
+            self.__begin_scope()
+            self.scopes.peek()["super"] = True
+
         self.__begin_scope()  # Creates the scope for below
         self.scopes.peek()["this"] = True
 
@@ -73,6 +85,8 @@ class Resolver(Visitor):
             self.__resolve_function(method, declaration)
 
         self.__end_scope()
+        if stmt.superclass is not None:
+            self.__end_scope()
         self._current_class = enclosing_class
 
     def visit_var_stmt(self, stmt: VarStmt) -> None:
@@ -138,6 +152,14 @@ class Resolver(Visitor):
         self.resolve(expr.value)
         self.resolve(expr.object)
 
+    def visit_super_expr(self, expr: SuperExpr) -> None:
+        if self._current_class == ClassType.NONE:
+            self.error(expr.keyword, "Can't use 'super' outside of a class")
+        elif self._current_class != ClassType.SUBCLASS:
+            self.error(expr.keyword, "Can't use 'super' in a class with no superclass")
+
+        self.resolve_local(expr, expr.keyword)
+
     def visit_this_expr(self, expr: ThisExpr) -> None:
         if self._current_class == ClassType.NONE:
             self.error(expr.keyword, "Can't use 'this' outside of a class")
@@ -179,6 +201,7 @@ class Resolver(Visitor):
         scope[name.lexeme] = False
 
     def resolve_local(self, expr: Expr, name: Token) -> None:
+        self.logger.info("Resolving local", name=name.lexeme, peek=self.scopes.peek())
         for i in range(self.scopes.length - 1, -1, -1):
             node = self.scopes.get(i)
             if not node:

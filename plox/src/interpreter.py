@@ -4,7 +4,7 @@ from _token import Token
 from environment import Environment
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
                         GroupingExpr, LiteralExpr, LogicalExpr, SetExpr,
-                        ThisExpr, UnaryExpr, VariableExpr, Visitor)
+                        SuperExpr, ThisExpr, UnaryExpr, VariableExpr, Visitor)
 from log import get_logger
 from loxcallable import (Clock, LoxCallable, LoxClass, LoxFunction,
                          LoxInstance, Return)
@@ -69,7 +69,16 @@ class Interpreter(Visitor):
         return
 
     def visit_class_stmt(self, stmt: ClassStmt):
+        superclass: Any = None
+        if stmt.superclass:
+            superclass = self._evaluate(stmt.superclass)
+            if not isinstance(superclass, LoxClass):
+                raise Exception(f"{stmt.superclass.name} superclass must be a class")
         self.environment._define(stmt.name.lexeme, None)
+
+        if stmt.superclass is not None:
+            self.environment = Environment(self.environment)
+            self.environment._define("super", superclass)
 
         methods: Dict[str, LoxFunction] = {}
         for method in stmt.methods:
@@ -78,7 +87,14 @@ class Interpreter(Visitor):
             )
             methods[method.name.lexeme] = function
 
-        klass: LoxClass = LoxClass(stmt.name.lexeme, methods)
+        klass: LoxClass = LoxClass(stmt.name.lexeme, superclass, methods)
+
+        if superclass is not None:
+            if not self.environment.enclosing:
+                raise Exception("Should be enclosing here")
+
+            self.environment = self.environment.enclosing
+
         self.environment._assign(stmt.name, klass)
 
     def visit_function_stmt(self, stmt: FunctionStmt):
@@ -165,6 +181,20 @@ class Interpreter(Visitor):
         value: Any = self._evaluate(expr.value)
         obj.set(expr, value)
         return value
+
+    def visit_super_expr(self, expr: SuperExpr):
+        distance: Optional[int] = self.__locals.get(expr)
+        if not distance:
+            raise Exception("Should have distance here")
+        superclass: LoxClass = self.environment.get_at(distance, "super")
+
+        obj: LoxInstance = self.environment.get_at(distance - 1, "this")
+
+        method: Optional[LoxFunction] = superclass.find_method(expr.method.lexeme)
+        if not method:
+            raise Exception(f"{expr.method.lexeme} Undefined property")
+
+        return method.bind(obj)
 
     def visit_this_expr(self, expr: ThisExpr):
         return self.__lookup_variable(expr.keyword, expr)

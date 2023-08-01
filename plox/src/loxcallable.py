@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from time import time
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 from _token import Token
 from environment import Environment
@@ -76,9 +76,12 @@ class Clock(LoxCallable):
 
 
 class LoxClass(LoxCallable):
-    def __init__(self, name: str, methods: Dict[str, LoxFunction]) -> None:
-        self.name = name
-        self.methods = methods
+    def __init__(
+        self, name: str, superclass: Optional[LoxClass], methods: Dict[str, LoxFunction]
+    ) -> None:
+        self.name: str = name
+        self.methods: Dict[str, LoxFunction] = methods
+        self.superclass: Optional[LoxClass] = superclass
 
     def to_string(self):
         return self.name
@@ -92,13 +95,18 @@ class LoxClass(LoxCallable):
         return instance
 
     def _arity(self) -> int:
-        initializer: LoxFunction = self.find_method("init")
+        initializer: Union[LoxFunction, None] = self.find_method("init")
 
         return 0 if initializer is None else initializer._arity()
 
     def find_method(self, name: str) -> Union[LoxFunction, None]:
-        method: Union[LoxFunction, None] = self.methods.get(name)
-        return method
+        if name in self.methods:
+            return self.methods[name]
+
+        if self.superclass is not None:
+            return self.superclass.find_method(name)
+
+        return None
 
 
 class LoxInstance:

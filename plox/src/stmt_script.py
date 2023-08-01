@@ -15,7 +15,7 @@ if __name__ == "__main__":
         "Var ; name:Token, initializer:Expr",
         "While ; condition:Expr, body:Stmt",
         "Block ; statements: list[Stmt]",
-        "Class ; name:Token, superclass:VariableExpr, methods:list[FunctionStmt]",
+        "Class ; name:Token, superclass:VariableExpr = None, methods:list[FunctionStmt]",
         "If ; condition : Expr, then_branch : Stmt, else_branch: Stmt",
         "Function ; name: Token, params: list[Token], body:list[Stmt]",
     ]

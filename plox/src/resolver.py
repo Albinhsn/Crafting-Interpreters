@@ -1,5 +1,5 @@
 import enum
-from typing import Union
+from typing import Optional, Union
 
 from _token import Token
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
@@ -28,53 +28,50 @@ class Resolver(Visitor):
     def __init__(self, interpreter) -> None:
         self.interpreter = interpreter
         self.scopes = Stack()
-        self._current_function = FunctionType.NONE
+        self.current_function = FunctionType.NONE
         self.error = interpreter.error
         self.logger = get_logger()
-        self._current_class = ClassType.NONE
+        self.current_class = ClassType.NONE
 
     def resolve(self, res: Union[list[Stmt], Stmt, Expr]) -> None:
         if isinstance(res, list):
             for stmt in res:
                 self.resolve(stmt)
-
-        elif isinstance(res, Stmt):
-            res.accept(self)
-
-        elif isinstance(res, Expr):
+        elif isinstance(res, Stmt) or isinstance(res, Expr):
             res.accept(self)
         else:
             raise Exception(f"Can't resolve type {type(res)}")
 
-    def __begin_scope(self) -> None:
+    def begin_scope(self) -> None:
         self.scopes.push({})
 
-    def __end_scope(self) -> None:
+    def end_scope(self) -> None:
         self.scopes.pop()
 
     def visit_block_stmt(self, stmt: BlockStmt) -> None:
-        self.__begin_scope()
+        self.begin_scope()
         self.resolve(stmt.statements)
-        self.__end_scope()
+        self.end_scope()
 
     def visit_class_stmt(self, stmt: ClassStmt) -> None:
-        enclosing_class: ClassType = self._current_class
-        self._current_class = ClassType.CLASS
-        self.__declare(stmt.name)
-        self.__define(stmt.name)
+        enclosing_class: ClassType = self.current_class
+        self.current_class = ClassType.CLASS
+
+        self.declare(stmt.name)
+        self.define(stmt.name)
 
         if stmt.superclass and stmt.superclass.name.lexeme == stmt.name.lexeme:
             self.error(stmt.superclass.name.lexeme, "A class can't inherit from itself")
 
         if stmt.superclass:
-            self._current_class = ClassType.SUBCLASS
+            self.current_class = ClassType.SUBCLASS
             self.resolve(stmt.superclass)
 
-        if stmt.superclass is not None:
-            self.__begin_scope()
+        if stmt.superclass:
+            self.begin_scope()
             self.scopes.peek()["super"] = True
 
-        self.__begin_scope()  # Creates the scope for below
+        self.begin_scope()  # Creates the scope for below
         self.scopes.peek()["this"] = True
 
         for method in stmt.methods:
@@ -82,18 +79,21 @@ class Resolver(Visitor):
             if method.name.lexeme == "init":
                 declaration = FunctionType.INITIALIZER
 
-            self.__resolve_function(method, declaration)
+            self.resolve_function(method, declaration)
+        self.end_scope()
 
-        self.__end_scope()
-        if stmt.superclass is not None:
-            self.__end_scope()
-        self._current_class = enclosing_class
+        if stmt.superclass:
+            self.end_scope()
+
+        self.current_class = enclosing_class
 
     def visit_var_stmt(self, stmt: VarStmt) -> None:
-        self.__declare(stmt.name)
-        if stmt.initializer is not None:
+        self.declare(stmt.name)
+
+        if stmt.initializer:
             self.resolve(stmt.initializer)
-        self.__define(stmt.name)
+
+        self.define(stmt.name)
 
     def visit_expression_stmt(self, stmt: ExpressionStmt) -> None:
         self.resolve(stmt.expression)
@@ -105,21 +105,23 @@ class Resolver(Visitor):
             self.resolve(stmt.else_branch)
 
     def visit_function_stmt(self, stmt: FunctionStmt) -> None:
-        self.__declare(stmt.name)
-        self.__define(stmt.name)
+        self.declare(stmt.name)
+        self.define(stmt.name)
 
-        self.__resolve_function(stmt, FunctionType.FUNCTION)
+        self.resolve_function(stmt, FunctionType.FUNCTION)
 
     def visit_print_stmt(self, stmt: PrintStmt) -> None:
         self.resolve(stmt.expression)
 
     def visit_return_stmt(self, stmt: ReturnStmt) -> None:
-        if self._current_function == FunctionType.NONE:
+        if self.current_function == FunctionType.NONE:
             self.error(stmt.keyword, "Can't return from top-level code")
+
         if stmt.value:
-            if self._current_function == FunctionType.INITIALIZER:
+            if self.current_function == FunctionType.INITIALIZER:
                 self.error(stmt.keyword, "Can't return a value from an initializer")
-        self.resolve(stmt.value)
+
+            self.resolve(stmt.value)
 
     def visit_while_stmt(self, stmt: WhileStmt) -> None:
         self.resolve(stmt.condition)
@@ -153,15 +155,15 @@ class Resolver(Visitor):
         self.resolve(expr.object)
 
     def visit_super_expr(self, expr: SuperExpr) -> None:
-        if self._current_class == ClassType.NONE:
+        if self.current_class == ClassType.NONE:
             self.error(expr.keyword, "Can't use 'super' outside of a class")
-        elif self._current_class != ClassType.SUBCLASS:
+        elif self.current_class != ClassType.SUBCLASS:
             self.error(expr.keyword, "Can't use 'super' in a class with no superclass")
 
         self.resolve_local(expr, expr.keyword)
 
     def visit_this_expr(self, expr: ThisExpr) -> None:
-        if self._current_class == ClassType.NONE:
+        if self.current_class == ClassType.NONE:
             self.error(expr.keyword, "Can't use 'this' outside of a class")
             return
 
@@ -171,12 +173,6 @@ class Resolver(Visitor):
         self.resolve(expr.right)
 
     def visit_variable_expr(self, expr: VariableExpr) -> None:
-        self.logger.info(
-            "Visiting var expr",
-            expr=expr.name.lexeme,
-            len=self.scopes.length,
-            peek=self.scopes.peek(),
-        )
         if (
             self.scopes.length != 0
             and self.scopes.peek().get(expr.name.lexeme) is False
@@ -191,8 +187,7 @@ class Resolver(Visitor):
         self.resolve(expr.value)
         self.resolve_local(expr, expr.name)
 
-    def __declare(self, name: Token) -> None:
-        self.logger.info("Trying to declare", name=name.lexeme)
+    def declare(self, name: Token) -> None:
         if self.scopes.length == 0:
             return
         scope: dict = self.scopes.peek()
@@ -203,30 +198,26 @@ class Resolver(Visitor):
     def resolve_local(self, expr: Expr, name: Token) -> None:
         self.logger.info("Resolving local", name=name.lexeme, peek=self.scopes.peek())
         for i in range(self.scopes.length - 1, -1, -1):
-            node = self.scopes.get(i)
-            if not node:
-                raise Exception("No node in get?")
-            if name.lexeme in node:
-                self.logger.info("Resolved local", name=name.lexeme)
-                self.interpreter._resolve(expr, self.scopes.length - 1 - i)
+            value: Optional[dict] = self.scopes.get(i)
+            if value and name.lexeme in value:
+                self.interpreter.resolve(expr, self.scopes.length - 1 - i)
                 return
 
-    def __define(self, name: Token) -> None:
-        if self.scopes.length == 0:
+    def define(self, name: Token) -> None:
+        scope = self.scopes.peek()
+        if scope is None:
             return
 
-        self.scopes.peek()[name.lexeme] = True
+        scope[name.lexeme] = True
 
-    def __resolve_function(self, function: FunctionStmt, func_type: FunctionType):
-        self.logger.info("Resolving function", name=function.name.lexeme)
-        enclosing_function: FunctionType = self._current_function
-        self._current_function = func_type
+    def resolve_function(self, function: FunctionStmt, func_type: FunctionType):
+        enclosing_function: FunctionType = self.current_function
+        self.current_function = func_type
 
-        self.__begin_scope()
+        self.begin_scope()
         for param in function.params:
-            self.__declare(param)
-            self.__define(param)
-        self.logger.info("Defined params", func_type=self._current_function)
+            self.declare(param)
+            self.define(param)
         self.resolve(function.body)
-        self.__end_scope()
-        self._current_function = enclosing_function
+        self.end_scope()
+        self.current_function = enclosing_function

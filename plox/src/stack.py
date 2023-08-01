@@ -39,14 +39,14 @@ class Stack:
 
         return out
 
-    def get(self, idx: int) -> Union[Node, None]:
+    def get(self, idx: int) -> Union[Any, None]:
         if not self.head:
             return None
         node: Node = self.head
         i = 0
         while i != idx:
             node = self.head.prev
-            if not node and i != idx - 1:
+            if not node and i != idx:
                 return None
             i += 1
 

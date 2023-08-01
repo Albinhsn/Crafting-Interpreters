@@ -38,7 +38,7 @@ class Lox:
         self.parser = Parser(self.tokens, self.error)
         stmts: list[Stmt] = self.parser.parse()
 
-        self.interpreter = Interpreter(Lox.runtime_error)
+        self.interpreter = Interpreter(Lox.error)
 
         if HAD_ERROR:
             return

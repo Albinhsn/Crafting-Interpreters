@@ -84,7 +84,7 @@ class FunctionStmt(Stmt, Visitor):
 class ClassStmt(Stmt, Visitor):
     def __init__(self, name: Token, methods: list[Stmt]):
         self.name: Token = name
-        self.methods: list[Stmt] = methods
+        self.methods: list[FunctionStmt] = methods
 
     def accept(self, visitor: Visitor):
         return visitor.visit_class_stmt(self)

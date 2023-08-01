@@ -2,8 +2,9 @@ import time
 from typing import Any, Union
 
 from _token import Token
-from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr,
-                        LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr)
+from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
+                        GroupingExpr, LiteralExpr, LogicalExpr, SetExpr,
+                        UnaryExpr, VariableExpr, ThisExpr)
 from log import get_logger
 from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
                   PrintStmt, ReturnStmt, Stmt, VarStmt, WhileStmt)
@@ -30,7 +31,7 @@ class Parser:
 
     def _declaration(self) -> Stmt:
         try:
-            self.logger.info("Declaration,trying to find", type=self.tokens[self._current].type)
+            # self.logger.info("Declaration,trying to find", type=self.tokens[self._current].type)
             if self._match(TokenType.CLASS):
                 return self.__class_declaration()
             if self._match(TokenType.FUN):
@@ -51,7 +52,7 @@ class Parser:
             methods.append(self._function("method"))
 
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after class body")
-        self.logger.info("Returning class", name=name.lexeme)
+        # self.logger.info("Returning class", name=name.lexeme)
         return ClassStmt(name, methods)
 
     def _function(self, kind: str):
@@ -227,6 +228,9 @@ class Parser:
             if isinstance(expr, VariableExpr):
                 name: Token = expr.name
                 return AssignExpr(name, value)
+            elif isinstance(expr, GetExpr):
+                get: GetExpr = expr
+                return SetExpr(get.object, get.name, value)
 
             self.error(equals, "Invalid assignment target.")
 
@@ -298,6 +302,11 @@ class Parser:
         while True:
             if self._match(TokenType.LEFT_PAREN):
                 expr = self._finish_call(expr)
+            elif self._match(TokenType.DOT):
+                name = self._consume(
+                    TokenType.IDENTIFIER, "Expect property name after '.'."
+                )
+                expr = GetExpr(expr, name)
             else:
                 break
 
@@ -332,6 +341,9 @@ class Parser:
 
         if self._match(TokenType.NUMBER, TokenType.STRING):
             return LiteralExpr(self._previous().literal)
+        
+        if self._match(TokenType.THIS):
+            return ThisExpr(self._previous())
 
         if self._match(TokenType.IDENTIFIER):
             return VariableExpr(self._previous())

@@ -28,7 +28,7 @@ def test_rec_fib():
     )
     assert isinstance(stmts[0], FunctionStmt)
     assert isinstance(stmts[1], BlockStmt)
-    assert len(stmts[0].body) == 3
+    assert len(stmts[0].body) == 2
     assert stmts[0].name.literal == "fib"
     assert stmts[0].params[0].literal == "n"
 

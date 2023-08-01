@@ -15,10 +15,13 @@ if __name__ == "__main__":
         "Logical ; left: Expr, operator: Token, right: Expr",
         "Literal  ;value: Any",
         "Unary    ;operator: Token,right:Expr",
+        "Set ; object: Expr, name:Token, value:Expr",
+        "This ; keyword:Token",
         "Variable ; name: Token",
         "Call ; callee : Expr, paren : Token, arguments : list[Expr]",
+        "Get ; object: Expr, name: Token",
     ]
-    k = f"""from abc import ABC
+    k = """from abc import ABC
 from typing import Any
 from _token import Token
 class Visitor(ABC):
@@ -32,7 +35,17 @@ class Visitor(ABC):
     def visit_{class_name}_expr(self, cls):
         pass
 """
-    STMTS = ["var", "print", "expression", "block", "if", "while", "function", "return", "class"]
+    STMTS = [
+        "var",
+        "print",
+        "expression",
+        "block",
+        "if",
+        "while",
+        "function",
+        "return",
+        "class",
+    ]
     for i in STMTS:
         s += f"""
     def visit_{i}_stmt(self, cls):

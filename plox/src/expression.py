@@ -25,10 +25,19 @@ class Visitor(ABC):
     def visit_unary_expr(self, cls):
         pass
 
+    def visit_set_expr(self, cls):
+        pass
+
+    def visit_this_expr(self, cls):
+        pass
+
     def visit_variable_expr(self, cls):
         pass
 
     def visit_call_expr(self, cls):
+        pass
+
+    def visit_get_expr(self, cls):
         pass
 
     def visit_var_stmt(self, cls):
@@ -118,6 +127,24 @@ class UnaryExpr(Expr, Visitor):
         return visitor.visit_unary_expr(self)
 
 
+class SetExpr(Expr, Visitor):
+    def __init__(self, object: Expr, name: Token, value: Expr):
+        self.object: Expr = object
+        self.name: Token = name
+        self.value: Expr = value
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_set_expr(self)
+
+
+class ThisExpr(Expr, Visitor):
+    def __init__(self, keyword: Token):
+        self.keyword: Token = keyword
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_this_expr(self)
+
+
 class VariableExpr(Expr, Visitor):
     def __init__(self, name: Token):
         self.name: Token = name
@@ -134,3 +161,12 @@ class CallExpr(Expr, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_call_expr(self)
+
+
+class GetExpr(Expr, Visitor):
+    def __init__(self, object: Expr, name: Token):
+        self.object: Expr = object
+        self.name: Token = name
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_get_expr(self)

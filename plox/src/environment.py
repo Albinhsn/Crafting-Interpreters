@@ -24,12 +24,14 @@ class Environment:
         raise Exception(name, "Undefined variable '" + name.lexeme + "'.")
 
     def get_at(self, distance: int, name: str) -> Any:
-        return self.__ancestor(distance).values.get(name)
+        return self.ancestor(distance).values.get(name)
 
     def ancestor(self, distance: int) -> Environment:
         environment: Environment = self
+        self.logger.info("Trying to find ancestor", environment=environment.values)
         for _ in range(distance):
-            enclosing = environment.enclosing
+            enclosing: Environment = environment.enclosing
+            self.logger.info("Trying enclosing", enclosing=enclosing.values)
             if not enclosing:
                 raise Exception("No ancestor")
             environment = enclosing

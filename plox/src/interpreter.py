@@ -6,7 +6,7 @@ from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr,
                         LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr,
                         Visitor)
 from log import get_logger
-from loxcallable import Clock, LoxCallable, LoxFunction
+from loxcallable import Clock, LoxCallable, LoxFunction, Return
 from stmt import (BlockStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt,
                   ReturnStmt, Stmt, VarStmt, WhileStmt)
 from token_type import TokenType
@@ -86,12 +86,8 @@ class Interpreter(Visitor):
         value = None
         if stmt.value is not None:
             value = self._evaluate(stmt.value)
-
+            # self.logger.info("Evaluated return", value=value)
         raise Return(value)
-
-    def visit_while_stmt(self, stmt: WhileStmt):
-        while self._is_truthy(self._evaluate(stmt.condition)):
-            self._execute(stmt.body)
 
     def visit_assign_expr(self, expr: AssignExpr):
         value: Any = self._evaluate(expr.value)
@@ -122,6 +118,7 @@ class Interpreter(Visitor):
     def visit_call_expr(self, expr: CallExpr):
         callee: Any = self._evaluate(expr.callee)
         arguments: list[Any] = [self._evaluate(argument) for argument in expr.arguments]
+        self.logger.info("visited call expr", args=expr.arguments)
 
         if not isinstance(callee, LoxCallable):
             self.error(expr.paren, "Can only call functions and classes")
@@ -218,12 +215,11 @@ class Interpreter(Visitor):
 
     def _execute_block(self, statements: list[Stmt], environment: Environment):
         previous: Environment = self.environment
-        try:
-            self.environment = environment
-            for statement in statements:
-                self._execute(statement)
-        except Exception:
-            pass
+        self.environment = environment
+
+        for statement in statements:
+            # self.logger.info("Executing block stmt", stmt=statement)
+            self._execute(statement)
         self.environment = previous
 
     def _check_number_operands(self, operator: Token, left_operand: Any, right_operand):

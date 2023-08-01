@@ -82,6 +82,8 @@ class Parser:
             return self._return_statement()
         if self._match(TokenType.LEFT_BRACE):
             return BlockStmt(self._block())
+        if self._match(TokenType.IF):
+            return self._if_statement()
         return self._expression_statement()
 
     def _return_statement(self):
@@ -221,8 +223,9 @@ class Parser:
         while self._match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL):
             operator: Token = self._previous()
             right: Expr = self._comparison()
-
+            
             expr = BinaryExpr(expr, operator, right)
+
 
         return expr
 
@@ -247,7 +250,7 @@ class Parser:
         while self._match(TokenType.MINUS, TokenType.PLUS):
             operator: Token = self._previous()
             right: Expr = self._factor()
-
+            self.logger.info("Minus term", left=expr, right=right)
             expr = BinaryExpr(expr, operator, right)
 
         return expr

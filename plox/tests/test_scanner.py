@@ -15,10 +15,143 @@ def get_tokens(s: str):
     return scanner
 
 
+def test_rec_fib():
+    scanner = get_tokens(
+        """
+fun fib(n) {
+  if (n < 2) return n;
+  return fib(n - 2) + fib(n - 1);
+}
+
+for (var i = 0; i < 20; i = i + 1) {
+  print fib(i);
+}
+"""
+    )
+    assert [i.lexeme for i in scanner.tokens] == [
+        "fun",
+        "fib",
+        "(",
+        "n",
+        ")",
+        "{",
+        "if",
+        "(",
+        "n",
+        "<",
+        2.0,
+        ")",
+        "return",
+        "n",
+        ";",
+        "return",
+        "fib",
+        "(",
+        "n",
+        "-",
+        2.0,
+        ")",
+        "+",
+        "fib",
+        "(",
+        "n",
+        "-",
+        1.0,
+        ")",
+        ";",
+        "}",
+        "for",
+        "(",
+        "var",
+        "i",
+        "=",
+        0,
+        ";",
+        "i",
+        "<",
+        20.0,
+        ";",
+        "i",
+        "=",
+        "i",
+        "+",
+        1.0,
+        ")",
+        "{",
+        "print",
+        "fib",
+        "(",
+        "i",
+        ")",
+        ";",
+        "}",
+        "",
+    ]
+    assert [i.type.name for i in scanner.tokens] == [
+        "FUN",
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "RIGHT_PAREN",
+        "LEFT_BRACE",
+        "IF",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "LESS",
+        "NUMBER",
+        "RIGHT_PAREN",
+        "RETURN",
+        "IDENTIFIER",
+        "SEMICOLON",
+        "RETURN",
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "MINUS",
+        "NUMBER",
+        "RIGHT_PAREN",
+        "PLUS",
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "MINUS",
+        "NUMBER",
+        "RIGHT_PAREN",
+        "SEMICOLON",
+        "RIGHT_BRACE",
+        "FOR",
+        "LEFT_PAREN",
+        "VAR",
+        "IDENTIFIER",
+        "EQUAL",
+        "NUMBER",
+        "SEMICOLON",
+        "IDENTIFIER",
+        "LESS",
+        "NUMBER",
+        "SEMICOLON",
+        "IDENTIFIER",
+        "EQUAL",
+        "IDENTIFIER",
+        "PLUS",
+        "NUMBER",
+        "RIGHT_PAREN",
+        "LEFT_BRACE",
+        "PRINT",
+        "IDENTIFIER",
+        "LEFT_PAREN",
+        "IDENTIFIER",
+        "RIGHT_PAREN",
+        "SEMICOLON",
+        "RIGHT_BRACE",
+        "EOF",
+    ]
+
+
 def test_less():
     scanner = get_tokens("1 < 5")
     assert scanner.tokens[1].type == TokenType.LESS
-    assert scanner.tokens[1].literal == "<" 
+    assert scanner.tokens[1].literal == "<"
 
 
 def test_func():

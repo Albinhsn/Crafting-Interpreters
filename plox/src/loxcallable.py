@@ -1,13 +1,14 @@
 from abc import ABC
+from time import time
 from typing import Any
 
 from environment import Environment
+from log import get_logger
 from stmt import FunctionStmt
 
 
 class Return(Exception):
-    def __init__(self, value) -> None:
-        self.value = value
+    pass
 
 
 class LoxCallable(ABC):
@@ -27,11 +28,13 @@ class LoxFunction(LoxCallable):
         environment: Environment = Environment(self.closure)
         for i in range(len(self._declaration.params)):
             environment._define(self._declaration.params[i].lexeme, arguments[i]),
-
+            get_logger().info("Defined smth", env=environment.values)
         try:
             interpreter._execute_block(self._declaration.body, environment)
         except Return as r:
-            return r.value
+            get_logger().info("Executed block", env=environment.values)
+            return r.args[0]
+         
         return None
 
     def _arity(self):

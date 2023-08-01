@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Any
 
 from _token import Token
-from expression import Expr, Visitor
+from expression import Expr, VariableExpr, Visitor
 
 
 class Stmt(ABC):
@@ -61,16 +61,6 @@ class BlockStmt(Stmt, Visitor):
         return visitor.visit_block_stmt(self)
 
 
-class IfStmt(Stmt, Visitor):
-    def __init__(self, condition: Expr, then_branch: Stmt, else_branch: Stmt):
-        self.condition: Expr = condition
-        self.then_branch: Stmt = then_branch
-        self.else_branch: Stmt = else_branch
-
-    def accept(self, visitor: Visitor):
-        return visitor.visit_if_stmt(self)
-
-
 class FunctionStmt(Stmt, Visitor):
     def __init__(self, name: Token, params: list[Token], body: list[Stmt]):
         self.name: Token = name
@@ -82,9 +72,22 @@ class FunctionStmt(Stmt, Visitor):
 
 
 class ClassStmt(Stmt, Visitor):
-    def __init__(self, name: Token, methods: list[Stmt]):
+    def __init__(
+        self, name: Token, superclass: VariableExpr, methods: list[FunctionStmt]
+    ):
         self.name: Token = name
+        self.superclass: VariableExpr = superclass
         self.methods: list[FunctionStmt] = methods
 
     def accept(self, visitor: Visitor):
         return visitor.visit_class_stmt(self)
+
+
+class IfStmt(Stmt, Visitor):
+    def __init__(self, condition: Expr, then_branch: Stmt, else_branch: Stmt):
+        self.condition: Expr = condition
+        self.then_branch: Stmt = then_branch
+        self.else_branch: Stmt = else_branch
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_if_stmt(self)

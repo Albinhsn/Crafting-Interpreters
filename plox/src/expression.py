@@ -28,6 +28,9 @@ class Visitor(ABC):
     def visit_set_expr(self, cls):
         pass
 
+    def visit_super_expr(self, cls):
+        pass
+
     def visit_this_expr(self, cls):
         pass
 
@@ -135,6 +138,15 @@ class SetExpr(Expr, Visitor):
 
     def accept(self, visitor: Visitor):
         return visitor.visit_set_expr(self)
+
+
+class SuperExpr(Expr, Visitor):
+    def __init__(self, keyword: Token, method: Token):
+        self.keyword: Token = keyword
+        self.method: Token = method
+
+    def accept(self, visitor: Visitor):
+        return visitor.visit_super_expr(self)
 
 
 class ThisExpr(Expr, Visitor):

@@ -4,7 +4,7 @@ from typing import Any, Union
 from _token import Token
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
                         GroupingExpr, LiteralExpr, LogicalExpr, SetExpr,
-                        UnaryExpr, VariableExpr, ThisExpr)
+                        SuperExpr, ThisExpr, UnaryExpr, VariableExpr)
 from log import get_logger
 from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
                   PrintStmt, ReturnStmt, Stmt, VarStmt, WhileStmt)
@@ -45,15 +45,20 @@ class Parser:
 
     def __class_declaration(self) -> Stmt:
         name: Token = self._consume(TokenType.IDENTIFIER, "Expect class name.")
-        self._consume(TokenType.LEFT_BRACE, "Expect '{' before class body")
 
+        superclass = None
+        if self._match(TokenType.LESS):
+            self._consume(TokenType.IDENTIFIER, "Expect superclass name")
+            superclass = VariableExpr(self._previous())
+
+        self._consume(TokenType.LEFT_BRACE, "Expect '{' before class body")
         methods: list[Stmt] = []
         while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end():
             methods.append(self._function("method"))
 
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after class body")
         # self.logger.info("Returning class", name=name.lexeme)
-        return ClassStmt(name, methods)
+        return ClassStmt(name, superclass, methods)
 
     def _function(self, kind: str):
         name: Token = self._consume(TokenType.IDENTIFIER, "Expect " + kind + " name.")
@@ -341,7 +346,15 @@ class Parser:
 
         if self._match(TokenType.NUMBER, TokenType.STRING):
             return LiteralExpr(self._previous().literal)
-        
+
+        if self._match(TokenType.SUPER):
+            keyword: Token = self._previous()
+            self._consume(TokenType.DOT, "Expect '.' after 'super'")
+            method: Token = self._consume(
+                TokenType.IDENTIFIER, "Expect superclass method name"
+            )
+            return SuperExpr(keyword, method)
+
         if self._match(TokenType.THIS):
             return ThisExpr(self._previous())
 

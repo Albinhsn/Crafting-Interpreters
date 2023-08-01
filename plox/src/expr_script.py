@@ -16,6 +16,7 @@ if __name__ == "__main__":
         "Literal  ;value: Any",
         "Unary    ;operator: Token,right:Expr",
         "Set ; object: Expr, name:Token, value:Expr",
+        "Super ; keyword: Token, method: Token",
         "This ; keyword:Token",
         "Variable ; name: Token",
         "Call ; callee : Expr, paren : Token, arguments : list[Expr]",

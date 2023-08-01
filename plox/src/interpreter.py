@@ -85,6 +85,7 @@ class Interpreter(Visitor):
     def visit_return_stmt(self, stmt: ReturnStmt):
         value = None
         if stmt.value is not None:
+            # self.logger.info("Evaluating return stmt", value=stmt.value)
             value = self._evaluate(stmt.value)
             # self.logger.info("Evaluated return", value=value)
         raise Return(value)
@@ -118,8 +119,7 @@ class Interpreter(Visitor):
     def visit_call_expr(self, expr: CallExpr):
         callee: Any = self._evaluate(expr.callee)
         arguments: list[Any] = [self._evaluate(argument) for argument in expr.arguments]
-        self.logger.info("visited call expr", args=expr.arguments)
-
+        # self.logger.info("Visiting call expr", args=arguments, env=self.environment.values)
         if not isinstance(callee, LoxCallable):
             self.error(expr.paren, "Can only call functions and classes")
             raise LoxRuntimeError("Trying to call non function")
@@ -130,8 +130,9 @@ class Interpreter(Visitor):
             raise LoxRuntimeError(
                 f"Expected {function._arity()} arguments but got {len(arguments)}."
             )
-
-        return function._call(self, arguments)
+        returned = function._call(self, arguments)
+        # self.logger.info("Returned from func", returned=returned, current_env=self.environment.values)
+        return returned 
 
     def visit_unary_expr(self, expr: UnaryExpr):
         right: Any = self._evaluate(expr.right)
@@ -160,6 +161,7 @@ class Interpreter(Visitor):
         left: Any = self._evaluate(expr.left)
         right: Any = self._evaluate(expr.right)
 
+        # self.logger.info("Binary expr", left=left, right=right)
         match expr.operator.type:
             case TokenType.BANG_EQUAL:
                 return left != right
@@ -217,10 +219,16 @@ class Interpreter(Visitor):
         previous: Environment = self.environment
         self.environment = environment
 
-        for statement in statements:
-            # self.logger.info("Executing block stmt", stmt=statement)
-            self._execute(statement)
+        try:
+            for statement in statements:
+                # self.logger.info("Executing block stmt", stmt=statement)
+                self._execute(statement)
+        except Return as r:
+            self.environment = previous
+            raise r
+
         self.environment = previous
+
 
     def _check_number_operands(self, operator: Token, left_operand: Any, right_operand):
         if isinstance(left_operand, float) and isinstance(right_operand, float):

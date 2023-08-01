@@ -250,7 +250,7 @@ class Parser:
         while self._match(TokenType.MINUS, TokenType.PLUS):
             operator: Token = self._previous()
             right: Expr = self._factor()
-            self.logger.info("Minus term", left=expr, right=right)
+            # self.logger.info("Minus term", left=expr, right=right)
             expr = BinaryExpr(expr, operator, right)
 
         return expr
@@ -293,7 +293,7 @@ class Parser:
         arguments: list[Expr] = []
 
         if not self._check(TokenType.RIGHT_PAREN):
-            # Can't do the lords loop
+            # Can't do the lords loop aka do while
             flag = True
             while flag or self._match(TokenType.COMMA):
                 flag = False

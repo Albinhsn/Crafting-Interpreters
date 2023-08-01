@@ -23,18 +23,18 @@ class LoxFunction(LoxCallable):
     def __init__(self, declaration: FunctionStmt, closure: Environment) -> None:
         self._declaration: FunctionStmt = declaration
         self.closure: Environment = closure
+        self.logger = get_logger(__name__)
 
     def _call(self, interpreter, arguments: list[Any]):
         environment: Environment = Environment(self.closure)
+        # self.logger.info("Calling, got new env", env=environment.enclosing.values)
         for i in range(len(self._declaration.params)):
             environment._define(self._declaration.params[i].lexeme, arguments[i]),
-            get_logger().info("Defined smth", env=environment.values)
         try:
             interpreter._execute_block(self._declaration.body, environment)
         except Return as r:
-            get_logger().info("Executed block", env=environment.values)
             return r.args[0]
-         
+
         return None
 
     def _arity(self):

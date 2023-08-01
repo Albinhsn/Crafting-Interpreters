@@ -33,11 +33,10 @@ class LoxFunction(LoxCallable):
 
     def _call(self, interpreter, arguments: list[Any]):
         environment: Environment = Environment(self.closure)
-        # self.logger.info("Calling, got new env", env=environment.enclosing.values)
         for i in range(len(self._declaration.params)):
-            environment._define(self._declaration.params[i].lexeme, arguments[i]),
+            environment.define(self._declaration.params[i].lexeme, arguments[i]),
         try:
-            interpreter._execute_block(self._declaration.body, environment)
+            interpreter.execute_block(self._declaration.body, environment)
         except Return as r:
             if self._is_initializer:
                 return self.closure.get_at(0, "this")
@@ -56,7 +55,7 @@ class LoxFunction(LoxCallable):
 
     def bind(self, instance: LoxInstance):
         environment: Environment = Environment(self.closure)
-        environment._define("this", instance)
+        environment.define("this", instance)
 
         return LoxFunction(self._declaration, environment, self._is_initializer)
 

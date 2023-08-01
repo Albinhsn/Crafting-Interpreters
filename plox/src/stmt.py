@@ -3,6 +3,7 @@ from typing import Any
 
 from _token import Token
 from expression import Expr, VariableExpr, Visitor
+from log import get_logger
 
 
 class Stmt(ABC):

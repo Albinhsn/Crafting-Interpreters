@@ -43,11 +43,18 @@ class Stack:
         if not self.head:
             return None
         node: Node = self.head
-        i = 0
-        while i != idx:
-            node = self.head.prev
-            if not node and i != idx:
+        for i in range(idx):
+            node = node.prev 
+            if node is None and i != idx:
                 return None
-            i += 1
 
         return node.value
+
+    def get_all(self):
+        node = self.head
+        all = []
+        while node:
+            all.append(node.value)
+            node = node.prev
+
+        return all

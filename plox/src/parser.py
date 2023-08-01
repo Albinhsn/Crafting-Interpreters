@@ -26,14 +26,12 @@ class Parser:
         statements: list[Stmt] = []
         while not self._is_at_end():
             statements.append(self._declaration())
-        # self.logger.info("Got statements", len=len(statements))
         return statements
 
     def _declaration(self) -> Stmt:
         try:
-            # self.logger.info("Declaration,trying to find", type=self.tokens[self._current].type)
             if self._match(TokenType.CLASS):
-                return self.__class_declaration()
+                return self.class_declaration()
             if self._match(TokenType.FUN):
                 return self._function("function")
             if self._match(TokenType.VAR):
@@ -43,7 +41,7 @@ class Parser:
             self._synchronize()
             return None
 
-    def __class_declaration(self) -> Stmt:
+    def class_declaration(self) -> Stmt:
         name: Token = self._consume(TokenType.IDENTIFIER, "Expect class name.")
 
         superclass = None
@@ -57,7 +55,6 @@ class Parser:
             methods.append(self._function("method"))
 
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after class body")
-        # self.logger.info("Returning class", name=name.lexeme)
         return ClassStmt(name, superclass, methods)
 
     def _function(self, kind: str):
@@ -273,7 +270,6 @@ class Parser:
         while self._match(TokenType.MINUS, TokenType.PLUS):
             operator: Token = self._previous()
             right: Expr = self._factor()
-            # self.logger.info("Minus term", left=expr, right=right)
             expr = BinaryExpr(expr, operator, right)
 
         return expr
@@ -302,7 +298,7 @@ class Parser:
         return self._call()
 
     def _call(self) -> Expr:
-        expr: Expr = self._primary()
+        expr: Expr = self.primary()
 
         while True:
             if self._match(TokenType.LEFT_PAREN):
@@ -334,7 +330,7 @@ class Parser:
         )
         return CallExpr(callee, paren, arguments)
 
-    def _primary(self) -> Expr:
+    def primary(self) -> Expr:
         if self._match(TokenType.FALSE):
             return LiteralExpr(False)
 

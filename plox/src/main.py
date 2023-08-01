@@ -13,13 +13,13 @@ from stmt import Stmt
 from token_type import TokenType
 
 HAD_ERROR = False
+LOGGER = get_logger(__name__)
 
 
 class Lox:
     def __init__(self, file_name: Optional[str] = None) -> None:
         self.file_name: Optional[str] = file_name
         self.input = None
-        # self._logger = get_logger()
 
     def run_file(self):
         if not self.file_name:
@@ -62,6 +62,7 @@ class Lox:
 
     @staticmethod
     def error(line: Union[int, Token], msg: str):
+        LOGGER.info("error", line=line, msg=msg.lexeme)
         if isinstance(line, int):
             Lox.report(line, "", msg)
             return

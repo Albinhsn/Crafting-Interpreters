@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from _token import Token
 from environment import Environment
@@ -6,9 +6,10 @@ from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr,
                         LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr,
                         Visitor)
 from log import get_logger
+from lox_class import LoxClass
 from loxcallable import Clock, LoxCallable, LoxFunction, Return
-from stmt import (BlockStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt,
-                  ReturnStmt, Stmt, VarStmt, WhileStmt)
+from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
+                  PrintStmt, ReturnStmt, Stmt, VarStmt, WhileStmt)
 from token_type import TokenType
 
 
@@ -21,20 +22,23 @@ class Interpreter(Visitor):
         self.error = error
         self.environment = Environment()
         self.globals = Environment()
-        self.logger = get_logger()
-
         self.globals._define("clock", Clock())
+        self.logger = get_logger()
+        self.__locals = {}
 
     def interpret(self, stmts: list[Stmt]):
         try:
             for stmt in stmts:
-                # self.logger.info("Executing stmt", stmt=stmt)
+                self.logger.info("Executing stmt", env=self.environment.values, globals=self.globals.values)
                 self._execute(stmt)
         except LoxRuntimeError as e:
             self.error(e)
 
     def _execute(self, stmt: Stmt):
         stmt.accept(self)
+
+    def _resolve(self, expr: Expr, depth: int) -> None:
+        self.__locals[expr] = depth
 
     def _stringify(self, obj: Any):
         if obj is None:
@@ -58,6 +62,11 @@ class Interpreter(Visitor):
         self._execute_block(stmt.statements, self.environment)
         return
 
+    def visit_class_stmt(self, stmt: ClassStmt):
+        self.environment._define(stmt.name.lexeme, None)
+        klass: LoxClass = LoxClass(stmt.name.lexeme)
+        self.environment._assign(stmt.name, klass)
+
     def visit_function_stmt(self, stmt: FunctionStmt):
         function = LoxFunction(stmt, self.environment)
         self.environment._define(stmt.name.lexeme, function)
@@ -72,6 +81,7 @@ class Interpreter(Visitor):
         return None
 
     def visit_print_stmt(self, stmt: PrintStmt):
+        self.logger.info("Evaluating", exp=stmt.expression)
         value: Any = self._evaluate(stmt.expression)
         print(self._stringify(value))
 
@@ -92,14 +102,26 @@ class Interpreter(Visitor):
 
     def visit_assign_expr(self, expr: AssignExpr):
         value: Any = self._evaluate(expr.value)
-        self.environment._assign(expr.name, value)
+
+        distance: Optional[int] = self.__locals.get(expr)
+        if distance:
+            self.environment.__assign_at(distance, expr.name, value)
+        else:
+            self.globals._assign(expr.name, value)
         return value
 
     def visit_literal_expr(self, expr: LiteralExpr) -> Any:
         return expr.value
 
     def visit_variable_expr(self, expr: VariableExpr):
-        return self.environment.get(expr.name)
+        return self.__lookup_variable(expr.name, expr)
+
+    def __lookup_variable(self, name: Token, expr: Expr):
+        distance: Optional[int] = self.__locals.get(expr)
+        self.logger.info("Looking up variable", distance=distance, name=name.lexeme)
+        if distance:
+            return self.environment.get_at(distance, name.lexeme)
+        return self.globals.get(name)
 
     def visit_logical_expr(self, expr: LogicalExpr):
         left = self._evaluate(expr.left)
@@ -132,7 +154,7 @@ class Interpreter(Visitor):
             )
         returned = function._call(self, arguments)
         # self.logger.info("Returned from func", returned=returned, current_env=self.environment.values)
-        return returned 
+        return returned
 
     def visit_unary_expr(self, expr: UnaryExpr):
         right: Any = self._evaluate(expr.right)
@@ -228,7 +250,6 @@ class Interpreter(Visitor):
             raise r
 
         self.environment = previous
-
 
     def _check_number_operands(self, operator: Token, left_operand: Any, right_operand):
         if isinstance(left_operand, float) and isinstance(right_operand, float):

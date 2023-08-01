@@ -32,8 +32,8 @@ class Visitor(ABC):
     def visit_{class_name}_expr(self, cls):
         pass
 """
-    X = ["var", "print", "expression", "block", "if", "while", "function", "return"]
-    for i in X:
+    STMTS = ["var", "print", "expression", "block", "if", "while", "function", "return", "class"]
+    for i in STMTS:
         s += f"""
     def visit_{i}_stmt(self, cls):
         pass

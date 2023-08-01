@@ -7,9 +7,12 @@ from ast_printer import AstPrinter
 from expression import Expr
 from interpreter import Interpreter, LoxRuntimeError
 from log import get_logger
+from resolver import Resolver
 from scanner import Scanner
 from stmt import Stmt
 from token_type import TokenType
+
+HAD_ERROR = False
 
 
 class Lox:
@@ -32,11 +35,21 @@ class Lox:
         self.scanner = Scanner(self.input)
         self.tokens: list[Token] = self.scanner.scan_tokens()
 
-
         self.parser = Parser(self.tokens, self.error)
         stmts: list[Stmt] = self.parser.parse()
 
         self.interpreter = Interpreter(Lox.runtime_error)
+
+        if HAD_ERROR:
+            return
+
+        self.resolver: Resolver = Resolver(self.interpreter)
+        self.resolver.resolve(stmts)
+
+        if HAD_ERROR:
+            print("Had error")
+            return
+
         self.interpreter.interpret(stmts)
 
     def run_repl(self):
@@ -56,6 +69,8 @@ class Lox:
             Lox.report(line.line, " at end", msg)
         else:
             Lox.report(line.line, f"at '{line.lexeme}'", msg)
+        global HAD_ERROR
+        HAD_ERROR = True
 
     @staticmethod
     def runtime_error(error: LoxRuntimeError):
@@ -63,8 +78,7 @@ class Lox:
 
     @staticmethod
     def report(line: int, where: str, message: str):
-        pass
-        # print(f"[line {line}] Error {where} : {message}")
+        print(f"[line {line}] Error {where} : {message}")
 
 
 if __name__ == "__main__":

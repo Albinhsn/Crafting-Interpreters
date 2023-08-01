@@ -55,6 +55,9 @@ class Visitor(ABC):
     def visit_return_stmt(self, cls):
         pass
 
+    def visit_class_stmt(self, cls):
+        pass
+
 
 class Expr(ABC):
     def accept(self, a: Any):

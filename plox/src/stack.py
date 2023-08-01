@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 
 class Node:
@@ -38,3 +38,16 @@ class Stack:
             self.head = self.head.prev
 
         return out
+
+    def get(self, idx: int) -> Union[Node, None]:
+        if not self.head:
+            return None
+        node: Node = self.head
+        i = 0
+        while i != idx:
+            node = self.head.prev
+            if not node and i != idx - 1:
+                return None
+            i += 1
+
+        return node.value

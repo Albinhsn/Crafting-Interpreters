@@ -62,7 +62,7 @@ class Interpreter(Visitor):
         self.environment = previous
 
     def visit_block_stmt(self, stmt: BlockStmt):
-        self.execute_block(stmt.statements, Environment(self.environment))
+        self.execute_block(stmt.statements, self.environment)
         return
 
     def visit_class_stmt(self, stmt: ClassStmt):

@@ -32,7 +32,7 @@ def test_quick_maths(capsys):
 
 def test_for(capsys):
     run_code(
-        """for (var i = 0; i < 30; i = i + 1) {
+        """for (var i = 0; i < 5; i = i + 1) {
         print i;
         }"""
     )

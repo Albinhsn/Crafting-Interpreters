@@ -32,7 +32,7 @@ class LoxFunction(LoxCallable):
         self.logger = get_logger(__name__)
 
     def bind(self, instance: LoxInstance):
-        environment: Environment = Environment(self.closure)
+        environment: Environment = self.closure
         environment.define("this", instance)
 
         return LoxFunction(self.declaration, environment, self.is_initializer)
@@ -44,7 +44,7 @@ class LoxFunction(LoxCallable):
         return len(self.declaration.params)
 
     def call(self, interpreter, arguments: list[Any]):
-        environment: Environment = Environment(self.closure)
+        environment: Environment = self.closure
 
         for i in range(len(self.declaration.params)):
             environment.define(self.declaration.params[i].lexeme, arguments[i])

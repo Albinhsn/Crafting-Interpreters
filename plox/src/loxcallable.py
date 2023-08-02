@@ -15,60 +15,59 @@ class Return(Exception):
 
 
 class LoxCallable(ABC):
-    def _call(self, interpreter, arguments: list[Any]):
-        pass
+    def call(*args, **kwargs):
+        ...
 
-    def _arity(self) -> int:
-        pass
+    def arity(*args, **kwargs):
+        ...
 
 
 class LoxFunction(LoxCallable):
     def __init__(
         self, declaration: FunctionStmt, closure: Environment, is_initializer: bool
     ) -> None:
-        self._declaration: FunctionStmt = declaration
+        self.declaration: FunctionStmt = declaration
         self.closure: Environment = closure
-        self._is_initializer: bool = is_initializer
+        self.is_initializer: bool = is_initializer
         self.logger = get_logger(__name__)
 
-    def _call(self, interpreter, arguments: list[Any]):
-        environment: Environment = Environment(self.closure)
-        # self.logger.info("Calling, got new env", env=environment.enclosing.values)
-        for i in range(len(self._declaration.params)):
-            environment._define(self._declaration.params[i].lexeme, arguments[i]),
+    def bind(self, instance: LoxInstance):
+        environment: Environment = self.closure
+        environment.define("this", instance)
+
+        return LoxFunction(self.declaration, environment, self.is_initializer)
+
+    def to_string(self):
+        return f"<fn {self.declaration.name.lexeme}>"
+
+    def arity(self):
+        return len(self.declaration.params)
+
+    def call(self, interpreter, arguments: list[Any]):
+        environment: Environment = self.closure
+
+        for i in range(len(self.declaration.params)):
+            environment.define(self.declaration.params[i].lexeme, arguments[i])
+
         try:
-            interpreter._execute_block(self._declaration.body, environment)
+            interpreter.execute_block(self.declaration.body, environment)
         except Return as r:
-            if self._is_initializer:
+            if self.is_initializer:
                 return self.closure.get_at(0, "this")
             return r.args[0]
 
-        if self._is_initializer:
+        if self.is_initializer:
             return self.closure.get_at(0, "this")
-
-        return None
-
-    def _arity(self):
-        return len(self._declaration.params)
-
-    def to_string(self):
-        return f"<fn {self._declaration.name.lexeme}>"
-
-    def bind(self, instance: LoxInstance):
-        environment: Environment = Environment(self.closure)
-        environment._define("this", instance)
-
-        return LoxFunction(self._declaration, environment, self._is_initializer)
 
 
 class Clock(LoxCallable):
     def __init__(self) -> None:
         pass
 
-    def _arity(self):
+    def arity(self):
         return 0
 
-    def _call(self, interpreter, arguments):
+    def call(self, interpreter, arguments):
         return time()
 
     def to_string(self):
@@ -86,18 +85,18 @@ class LoxClass(LoxCallable):
     def to_string(self):
         return self.name
 
-    def _call(self, interpreter, arguments) -> Any:
+    def call(self, interpreter, arguments) -> Any:
         instance: LoxInstance = LoxInstance(self)
 
         initializer: Union[LoxFunction, None] = self.find_method("init")
         if initializer is not None:
-            initializer.bind(instance)._call(interpreter, arguments)
+            initializer.bind(instance).call(interpreter, arguments)
+
         return instance
 
-    def _arity(self) -> int:
+    def arity(self) -> int:
         initializer: Union[LoxFunction, None] = self.find_method("init")
-
-        return 0 if initializer is None else initializer._arity()
+        return 0 if initializer is None else initializer.arity()
 
     def find_method(self, name: str) -> Union[LoxFunction, None]:
         if name in self.methods:
@@ -105,8 +104,6 @@ class LoxClass(LoxCallable):
 
         if self.superclass is not None:
             return self.superclass.find_method(name)
-
-        return None
 
 
 class LoxInstance:

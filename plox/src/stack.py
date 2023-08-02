@@ -29,7 +29,7 @@ class Stack:
 
     def pop(self):
         if self.head is None:
-            return None
+            return
         self.length -= 1
         out: Any = self.head.value
         if self.length == 0:
@@ -41,13 +41,20 @@ class Stack:
 
     def get(self, idx: int) -> Union[Any, None]:
         if not self.head:
-            return None
+            return
         node: Node = self.head
-        i = 0
-        while i != idx:
-            node = self.head.prev
-            if not node and i != idx:
-                return None
-            i += 1
+        for i in range(idx):
+            node = node.prev 
+            if node is None and i != idx:
+                return
 
         return node.value
+
+    def get_all(self):
+        node = self.head
+        all = []
+        while node:
+            all.append(node.value)
+            node = node.prev
+
+        return all

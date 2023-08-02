@@ -21,64 +21,62 @@ class Interpreter(Visitor):
     def __init__(self, error) -> None:
         self.error = error
         self.environment = Environment()
-        self.globals = Environment()
-        self.globals._define("clock", Clock())
+        self.globals = self.environment
+        self.globals.define("clock", Clock())
         self.logger = get_logger()
-        self.__locals = {}
+        self.locals = {}
+
+    def get_all_env(self):
+        envs = []
+        env = self.environment
+        while env:
+            envs.append(env.values)
+            env = env.enclosing
+        return envs
 
     def interpret(self, stmts: list[Stmt]):
         try:
             for stmt in stmts:
-                # self.logger.info(
-                #     "Executing stmt",
-                #     env=self.environment.values,
-                #     globals=self.globals.values,
-                # )
-                self._execute(stmt)
+                self.execute(stmt)
         except LoxRuntimeError as e:
             self.error(1, e.args[0])
 
-    def _execute(self, stmt: Stmt):
+    def evaluate(self, expr: Expr):
+        return expr.accept(self)
+
+    def execute(self, stmt: Stmt):
         stmt.accept(self)
 
-    def _resolve(self, expr: Expr, depth: int) -> None:
-        self.__locals[expr] = depth
+    def resolve(self, expr: Expr, depth: int) -> None:
+        self.locals[expr] = depth
 
-    def _stringify(self, obj: Any):
-        if obj is None:
-            return "nil"
-
-        if isinstance(obj, float):
-            txt: str = str(obj)
-
-            if ".0" == txt[-2:]:
-                txt = txt[0:-2]
-
-            return txt
-        if isinstance(obj, LoxClass):
-            return obj.to_string()
-
-        # Does this never raise?
-        return str(obj)
-
-    def visit_expression_stmt(self, stmt: ExpressionStmt):
-        self._evaluate(stmt.expression)
+    def execute_block(self, statements: list[Stmt], environment: Environment):
+        previous: Environment = self.environment
+        try:
+            self.environment = environment
+            for statement in statements:
+                self.execute(statement)
+        except Return as r:
+            self.environment = previous
+            raise r
+        self.environment = previous
 
     def visit_block_stmt(self, stmt: BlockStmt):
-        self._execute_block(stmt.statements, self.environment)
+        self.execute_block(stmt.statements, self.environment)
         return
 
     def visit_class_stmt(self, stmt: ClassStmt):
         superclass: Any = None
         if stmt.superclass:
-            superclass = self._evaluate(stmt.superclass)
+            superclass = self.evaluate(stmt.superclass)
             if not isinstance(superclass, LoxClass):
                 raise Exception(f"{stmt.superclass.name} superclass must be a class")
-        self.environment._define(stmt.name.lexeme, None)
+
+        self.environment.define(stmt.name.lexeme, None)
 
         if stmt.superclass is not None:
             self.environment = Environment(self.environment)
-            self.environment._define("super", superclass)
+            self.environment.define("super", superclass)
 
         methods: Dict[str, LoxFunction] = {}
         for method in stmt.methods:
@@ -95,167 +93,55 @@ class Interpreter(Visitor):
 
             self.environment = self.environment.enclosing
 
-        self.environment._assign(stmt.name, klass)
+        self.environment.assign(stmt.name, klass)
+
+    def visit_expression_stmt(self, stmt: ExpressionStmt):
+        self.evaluate(stmt.expression)
 
     def visit_function_stmt(self, stmt: FunctionStmt):
         function = LoxFunction(stmt, self.environment, False)
-        self.environment._define(stmt.name.lexeme, function)
-        return None
+        self.environment.define(stmt.name.lexeme, function)
 
     def visit_if_stmt(self, stmt: IfStmt):
-        if self._is_truthy(self._evaluate(stmt.condition)):
-            self._execute(stmt.then_branch)
+        if self.is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.then_branch)
         elif stmt.else_branch is not None:
-            self._execute((stmt.else_branch))
-
-        return None
+            self.execute((stmt.else_branch))
 
     def visit_print_stmt(self, stmt: PrintStmt):
-        # self.logger.info(
-        #     "Evaluating", exp=stmt.expression.name.lexeme, env=self.environment.values
-        # )
-        value: Any = self._evaluate(stmt.expression)
-        print(self._stringify(value))
-
-    def visit_var_stmt(self, stmt: VarStmt):
-        value: Any = None
-        if stmt.initializer is not None:
-            value = self._evaluate(stmt.initializer)
-        self.environment._define(stmt.name.lexeme, value)
-        return None
+        value: Any = self.evaluate(stmt.expression)
+        print(self.stringify(value))
 
     def visit_return_stmt(self, stmt: ReturnStmt):
         value = None
         if stmt.value is not None:
-            # self.logger.info("Evaluating return stmt", value=stmt.value)
-            value = self._evaluate(stmt.value)
-            # self.logger.info("Evaluated return", value=value)
+            value = self.evaluate(stmt.value)
         raise Return(value)
 
-    def visit_assign_expr(self, expr: AssignExpr):
-        value: Any = self._evaluate(expr.value)
-
-        distance: Optional[int] = self.__locals.get(expr)
-        if distance:
-            self.environment.__assign_at(distance, expr.name, value)
-        else:
-            self.globals._assign(expr.name, value)
-        return value
-
-    def visit_literal_expr(self, expr: LiteralExpr) -> Any:
-        return expr.value
-
-    def visit_variable_expr(self, expr: VariableExpr):
-        return self.__lookup_variable(expr.name, expr)
-
-    def __lookup_variable(self, name: Token, expr: Expr):
-        distance: Optional[int] = self.__locals.get(expr)
-        # self.logger.info(
-        #     "Looking up variable",
-        #     distance=distance,
-        #     name=name.lexeme,
-        #     env=self.environment.values,
-        # )
-        if distance:
-            return self.environment.get_at(distance, name.lexeme)
-        # This should be globals
-        return self.environment.get(name)
-
-    def visit_logical_expr(self, expr: LogicalExpr):
-        left = self._evaluate(expr.left)
-
-        if expr.operator.type == TokenType.OR:
-            if self._is_truthy(left):
-                return left
-        else:
-            if not self._is_truthy(left):
-                return left
-        return self._evaluate(expr.right)
-
-    def visit_set_expr(self, expr: SetExpr):
-        obj: Any = self._evaluate(expr.object)
-
-        if not isinstance(object, LoxInstance):
-            raise LoxRuntimeError(f"{expr.name} Only instances have fields")
-
-        value: Any = self._evaluate(expr.value)
-        obj.set(expr, value)
-        return value
-
-    def visit_super_expr(self, expr: SuperExpr):
-        distance: Optional[int] = self.__locals.get(expr)
-        if not distance:
-            raise Exception("Should have distance here")
-        superclass: LoxClass = self.environment.get_at(distance, "super")
-
-        obj: LoxInstance = self.environment.get_at(distance - 1, "this")
-
-        method: Optional[LoxFunction] = superclass.find_method(expr.method.lexeme)
-        if not method:
-            raise Exception(f"{expr.method.lexeme} Undefined property")
-
-        return method.bind(obj)
-
-    def visit_this_expr(self, expr: ThisExpr):
-        return self.__lookup_variable(expr.keyword, expr)
+    def visit_var_stmt(self, stmt: VarStmt):
+        value: Any = None
+        if stmt.initializer is not None:
+            value = self.evaluate(stmt.initializer)
+        self.environment.define(stmt.name.lexeme, value)
 
     def visit_while_stmt(self, stmt: WhileStmt):
-        while self._is_truthy(self._evaluate(stmt.condition)):
-            self._execute(stmt.body)
+        while self.is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.body)
 
-    def visit_call_expr(self, expr: CallExpr):
-        callee: Any = self._evaluate(expr.callee)
-        arguments: list[Any] = [self._evaluate(argument) for argument in expr.arguments]
-        # self.logger.info("Visiting call expr", args=arguments, env=self.environment.values)
-        if not isinstance(callee, LoxCallable):
-            self.error(expr.paren, "Can only call functions and classes")
-            raise LoxRuntimeError("Trying to call non function")
+    def visit_assign_expr(self, expr: AssignExpr):
+        value: Any = self.evaluate(expr.value)
 
-        function: LoxCallable = callee
-
-        if len(arguments) != function._arity():
-            raise LoxRuntimeError(
-                f"Expected {function._arity()} arguments but got {len(arguments)}."
-            )
-        returned = function._call(self, arguments)
-        # self.logger.info("Returned from func", returned=returned, current_env=self.environment.values)
-        return returned
-
-    def visit_get_expr(self, expr: GetExpr) -> Any:
-        obj: Any = self._evaluate(expr.object)
-        if isinstance(obj, LoxInstance):
-            return obj.get(expr.name)
-
-        self.error(expr.name, "Only instances have properties")
-
-    def visit_unary_expr(self, expr: UnaryExpr):
-        right: Any = self._evaluate(expr.right)
-
-        match expr.operator.type:
-            case TokenType.BANG:
-                return not self._is_truthy(right)
-            case TokenType.MINUS:
-                self._check_number_operand(expr.operator, right)
-                return -float(right)
-            case _:
-                pass
-
-        return None
-
-    def _is_truthy(self, obj: Any):
-        if not obj:
-            return False
-
-        if isinstance(obj, bool):
-            return bool(obj)
-
-        return True
+        distance: Optional[int] = self.locals.get(expr)
+        if distance is not None:
+            self.environment.assign_at(distance, expr.name, value)
+        else:
+            self.globals.assign(expr.name, value)
+        return value
 
     def visit_binary_expr(self, expr: BinaryExpr):
-        left: Any = self._evaluate(expr.left)
-        right: Any = self._evaluate(expr.right)
+        left: Any = self.evaluate(expr.left)
+        right: Any = self.evaluate(expr.right)
 
-        # self.logger.info("Binary expr", left=left, right=right)
         match expr.operator.type:
             case TokenType.BANG_EQUAL:
                 return left != right
@@ -264,22 +150,23 @@ class Interpreter(Visitor):
                 return left == right
 
             case TokenType.GREATER:
-                self._check_number_operands(expr.operator, left, right)
+                self.check_number_operands(expr.operator, left, right)
                 return left > right
 
             case TokenType.GREATER_EQUAL:
-                self._check_number_operands(expr.operator, left, right)
+                self.check_number_operands(expr.operator, left, right)
                 return left >= right
 
             case TokenType.LESS:
-                self._check_number_operands(expr.operator, left, right)
+                self.check_number_operands(expr.operator, left, right)
                 return left < right
 
             case TokenType.LESS_EQUAL:
-                self._check_number_operands(expr.operator, left, right)
+                self.check_number_operands(expr.operator, left, right)
                 return left <= right
 
             case TokenType.MINUS:
+                self.check_number_operands(expr.operator, left, right)
                 return float(left) - float(right)
 
             case TokenType.PLUS:
@@ -291,43 +178,136 @@ class Interpreter(Visitor):
                 raise Exception(f"Trying to + smth? {type(left)} and {type(right)}")
 
             case TokenType.SLASH:
-                self._check_number_operands(expr.operator, left, right)
+                self.check_number_operands(expr.operator, left, right)
                 return float(left) / float(right)
 
             case TokenType.STAR:
-                self._check_number_operands(expr.operator, left, right)
+                self.check_number_operands(expr.operator, left, right)
                 return float(left) * float(right)
 
-        return None
+    def visit_call_expr(self, expr: CallExpr):
+        callee: Any = self.evaluate(expr.callee)
+
+        arguments: list[Any] = [self.evaluate(argument) for argument in expr.arguments]
+
+        if not isinstance(callee, LoxCallable):
+            self.error(expr.paren, "Can only call functions and classes")
+            raise LoxRuntimeError("Trying to call non function")
+
+        function: LoxCallable = callee
+
+        if len(arguments) != function.arity():
+            raise LoxRuntimeError(
+                f"Expected {function.arity()} arguments but got {len(arguments)}."
+            )
+
+        return function.call(self, arguments)
+
+    def visit_get_expr(self, expr: GetExpr) -> Any:
+        obj: Any = self.evaluate(expr.object)
+        if isinstance(obj, LoxInstance):
+            return obj.get(expr.name)
+
+        self.error(expr.name, "Only instances have properties")
 
     def visit_grouping_expr(self, expr: GroupingExpr):
-        return self._evaluate(expr)
+        return self.evaluate(expr)
 
-    def _check_number_operand(self, operator: Token, operand: Any):
+    def visit_literal_expr(self, expr: LiteralExpr) -> Any:
+        return expr.value
+
+    def visit_logical_expr(self, expr: LogicalExpr):
+        left = self.evaluate(expr.left)
+
+        if expr.operator.type == TokenType.OR:
+            if self.is_truthy(left):
+                return left
+        else:
+            if not self.is_truthy(left):
+                return left
+        return self.evaluate(expr.right)
+
+    def visit_set_expr(self, expr: SetExpr):
+        obj: Any = self.evaluate(expr.object)
+
+        if not isinstance(obj, LoxInstance):
+            raise LoxRuntimeError(f"{expr.name} Only instances have fields")
+
+        value: Any = self.evaluate(expr.value)
+        obj.set(expr, value)
+        return value
+
+    def visit_super_expr(self, expr: SuperExpr):
+        distance: Optional[int] = self.locals.get(expr)
+        if distance is None:
+            raise Exception("Should have distance here")
+
+        superclass: LoxClass = self.environment.get_at(distance, "super")
+        obj: LoxInstance = self.environment.get_at(distance - 1, "this")
+
+        method: Optional[LoxFunction] = superclass.find_method(expr.method.lexeme)
+        if method is None:
+            raise Exception(f"{expr.method.lexeme} Undefined property")
+
+        return method.bind(obj)
+
+    def visit_this_expr(self, expr: ThisExpr):
+        return self.lookup_variable(expr.keyword, expr)
+
+    def visit_unary_expr(self, expr: UnaryExpr):
+        right: Any = self.evaluate(expr.right)
+
+        match expr.operator.type:
+            case TokenType.BANG:
+                return not self.is_truthy(right)
+            case TokenType.MINUS:
+                self.check_number_operand(expr.operator, right)
+                return -float(right)
+            case _:
+                pass
+
+    def visit_variable_expr(self, expr: VariableExpr):
+        return self.lookup_variable(expr.name, expr)
+
+    def lookup_variable(self, name: Token, expr: Expr):
+        distance: Optional[int] = self.locals.get(expr)
+        if distance is not None:
+            return self.environment.get_at(distance, name.lexeme)
+
+        return self.globals.get(name)
+
+    def check_number_operand(self, operator: Token, operand: Any):
         if isinstance(operand, float):
             return
-
         raise LoxRuntimeError(operator, "Operand must be a number")
 
-    def _execute_block(self, statements: list[Stmt], environment: Environment):
-        previous: Environment = self.environment
-        self.environment = environment
-
-        try:
-            for statement in statements:
-                # self.logger.info("Executing block stmt", stmt=statement)
-                self._execute(statement)
-        except Return as r:
-            self.environment = previous
-            raise r
-
-        self.environment = previous
-
-    def _check_number_operands(self, operator: Token, left_operand: Any, right_operand):
+    def check_number_operands(self, operator: Token, left_operand: Any, right_operand):
         if isinstance(left_operand, float) and isinstance(right_operand, float):
             return
-
         raise LoxRuntimeError(operator, "Operands must be a numbers")
 
-    def _evaluate(self, expr: Expr):
-        return expr.accept(self)
+    def stringify(self, obj: Any):
+        if obj is None:
+            return "nil"
+
+        if isinstance(obj, float):
+            txt: str = str(obj)
+
+            if ".0" == txt[-2:]:
+                txt = txt[0:-2]
+
+            return txt
+        if isinstance(obj, LoxClass):
+            return obj.to_string()
+
+        # Does this never raise?
+        return str(obj)
+
+    def is_truthy(self, obj: Any):
+        if obj is None:
+            return False
+
+        if isinstance(obj, bool):
+            return bool(obj)
+
+        return True

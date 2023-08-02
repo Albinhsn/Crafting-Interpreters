@@ -239,7 +239,7 @@ class Interpreter(Visitor):
         if distance is None:
             raise Exception("Should have distance here")
 
-        superclass: LoxClass = self.environment.get_at(distance+1, "super")
+        superclass: LoxClass = self.environment.get_at(distance + 1, "super")
         obj: LoxInstance = self.environment.get_at(distance - 1, "this")
 
         method: Optional[LoxFunction] = superclass.find_method(expr.method.lexeme)

@@ -51,4 +51,3 @@ class Environment:
             result += " -> " + self.enclosing.to_string()
 
         return result
-

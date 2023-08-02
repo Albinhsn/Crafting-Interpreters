@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional, Union
 
 from _token import Token
 from environment import Environment
-from log import get_logger
 from stmt import FunctionStmt
 
 
@@ -29,7 +28,6 @@ class LoxFunction(LoxCallable):
         self.declaration: FunctionStmt = declaration
         self.closure: Environment = closure
         self.is_initializer: bool = is_initializer
-        self.logger = get_logger(__name__)
 
     def bind(self, instance: LoxInstance):
         environment: Environment = self.closure

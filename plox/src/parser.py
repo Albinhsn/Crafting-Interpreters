@@ -4,7 +4,6 @@ from _token import Token
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
                         GroupingExpr, LiteralExpr, LogicalExpr, SetExpr,
                         SuperExpr, ThisExpr, UnaryExpr, VariableExpr)
-from log import get_logger
 from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
                   PrintStmt, ReturnStmt, Stmt, VarStmt, WhileStmt)
 from token_type import TokenType
@@ -19,7 +18,6 @@ class Parser:
         self._current: int = 0
         self.tokens = tokens
         self.error = error
-        self.logger = get_logger()
 
     def parse(self) -> list[Stmt]:
         statements: list[Stmt] = []

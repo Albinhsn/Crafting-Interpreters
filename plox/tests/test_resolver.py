@@ -39,4 +39,3 @@ fun fib(n) {
 print fib(5);
             """
     )
-    assert True == False

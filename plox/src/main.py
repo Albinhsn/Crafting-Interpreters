@@ -6,14 +6,12 @@ from _token import Token
 from ast_printer import AstPrinter
 from expression import Expr
 from interpreter import Interpreter, LoxRuntimeError
-from log import get_logger
 from resolver import Resolver
 from scanner import Scanner
 from stmt import Stmt
 from token_type import TokenType
 
 HAD_ERROR = False
-LOGGER = get_logger(__name__)
 
 
 class Lox:
@@ -62,7 +60,6 @@ class Lox:
 
     @staticmethod
     def error(line: Union[int, Token], msg: str):
-        LOGGER.info("error", line=line, msg=msg.lexeme)
         if isinstance(line, int):
             Lox.report(line, "", msg)
             return

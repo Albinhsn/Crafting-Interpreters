@@ -5,7 +5,6 @@ from _token import Token
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
                         GroupingExpr, LiteralExpr, LogicalExpr, SetExpr,
                         SuperExpr, ThisExpr, UnaryExpr, VariableExpr, Visitor)
-from log import get_logger
 from stack import Stack
 from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
                   PrintStmt, ReturnStmt, Stmt, VarStmt, WhileStmt)
@@ -30,7 +29,6 @@ class Resolver(Visitor):
         self.scopes = Stack()
         self.current_function = FunctionType.NONE
         self.error = interpreter.error
-        self.logger = get_logger()
         self.current_class = ClassType.NONE
 
     def resolve(self, res: Union[list[Stmt], Stmt, Expr]) -> None:
@@ -54,17 +52,12 @@ class Resolver(Visitor):
         self.declare(stmt.name)
         self.define(stmt.name)
 
-        if (
-            stmt.superclass is not None
-            and stmt.superclass.name.lexeme == stmt.name.lexeme
-        ):
+        if stmt.superclass and stmt.superclass.name.lexeme == stmt.name.lexeme:
             self.error(stmt.superclass.name.lexeme, "A class can't inherit from itself")
 
         if stmt.superclass is not None:
             self.current_class = ClassType.SUBCLASS
             self.resolve(stmt.superclass)
-
-        if stmt.superclass:
             self.begin_scope()
             self.scopes.peek()["super"] = True
 

@@ -1,9 +1,16 @@
+fibo1:
+	pipenv run python3 ./src/main.py fib
 
+fibo2:
+	pipenv run python3 ./src/main.py fib2
 
+closure11:
+	pipenv run python3 ./src/main.py closure1 
+
+closure22:
+	pipenv run python3 ./src/main.py closure2
 test: 
 	pipenv run pytest tests/
-
-
 run: 
 	pipenv run python3 ./src/main.py input
 

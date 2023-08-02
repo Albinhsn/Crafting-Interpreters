@@ -4,7 +4,6 @@ from _token import Token
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
                         GroupingExpr, LiteralExpr, LogicalExpr, SetExpr,
                         SuperExpr, ThisExpr, UnaryExpr, VariableExpr)
-from log import get_logger
 from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
                   PrintStmt, ReturnStmt, Stmt, VarStmt, WhileStmt)
 from token_type import TokenType
@@ -19,7 +18,6 @@ class Parser:
         self._current: int = 0
         self.tokens = tokens
         self.error = error
-        self.logger = get_logger()
 
     def parse(self) -> list[Stmt]:
         statements: list[Stmt] = []
@@ -53,12 +51,12 @@ class Parser:
             superclass = VariableExpr(self._previous())
 
         self._consume(TokenType.LEFT_BRACE, "Expect '{' before class body")
-        methods: list[Stmt] = []
+        methods: list[FunctionStmt] = []
         while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end():
             methods.append(self.function("method"))
 
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after class body")
-        return ClassStmt(name, superclass, methods)
+        return ClassStmt(name, methods, superclass)
 
     def statement(self):
         if self._match(TokenType.FOR):

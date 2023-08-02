@@ -19,5 +19,5 @@ def get_logger(name=None):
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )
-    log = structlog.get_logger(name)
+    log = structlog.get_logger(file=name)
     return log

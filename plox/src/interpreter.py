@@ -5,7 +5,6 @@ from environment import Environment
 from expression import (AssignExpr, BinaryExpr, CallExpr, Expr, GetExpr,
                         GroupingExpr, LiteralExpr, LogicalExpr, SetExpr,
                         SuperExpr, ThisExpr, UnaryExpr, VariableExpr, Visitor)
-from log import get_logger
 from loxcallable import (Clock, LoxCallable, LoxClass, LoxFunction,
                          LoxInstance, Return)
 from stmt import (BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt,
@@ -23,7 +22,6 @@ class Interpreter(Visitor):
         self.environment = Environment()
         self.globals = self.environment
         self.globals.define("clock", Clock())
-        self.logger = get_logger()
         self.locals = {}
 
     def get_all_env(self):
@@ -86,7 +84,6 @@ class Interpreter(Visitor):
             methods[method.name.lexeme] = function
 
         klass: LoxClass = LoxClass(stmt.name.lexeme, superclass, methods)
-
         if superclass is not None:
             if not self.environment.enclosing:
                 raise Exception("Should be enclosing here")
@@ -242,7 +239,7 @@ class Interpreter(Visitor):
         if distance is None:
             raise Exception("Should have distance here")
 
-        superclass: LoxClass = self.environment.get_at(distance, "super")
+        superclass: LoxClass = self.environment.get_at(distance + 1, "super")
         obj: LoxInstance = self.environment.get_at(distance - 1, "this")
 
         method: Optional[LoxFunction] = superclass.find_method(expr.method.lexeme)

@@ -53,12 +53,12 @@ class Parser:
             superclass = VariableExpr(self._previous())
 
         self._consume(TokenType.LEFT_BRACE, "Expect '{' before class body")
-        methods: list[Stmt] = []
+        methods: list[FunctionStmt] = []
         while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end():
             methods.append(self.function("method"))
 
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after class body")
-        return ClassStmt(name, superclass, methods)
+        return ClassStmt(name, methods, superclass)
 
     def statement(self):
         if self._match(TokenType.FOR):

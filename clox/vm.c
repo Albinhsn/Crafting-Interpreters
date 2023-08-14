@@ -13,7 +13,7 @@ VM vm;
 
 static void resetStack() { vm.stackTop = vm.stack; }
 
-static void runTimeError(const char *format, ...) {
+static void runtimeError(const char *format, ...) {
   va_list args;
   va_start(args, format);
   vfprintf(stderr, format, args);
@@ -29,9 +29,13 @@ static void runTimeError(const char *format, ...) {
 void initVM() {
   resetStack();
   vm.objects = NULL;
+
+  initTable(&vm.globals);
   initTable(&vm.strings);
 }
 void freeVM() {
+
+  freeTable(&vm.globals);
   freeTable(&vm.strings);
   freeObjects();
 }
@@ -69,10 +73,11 @@ static void concatenate() {
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op)                                               \
   do {                                                                         \
     if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                          \
-      runTimeError("Operands must be numbers.");                               \
+      runtimeError("Operands must be numbers.");                               \
       return INTERPRET_RUNTIME_ERROR;                                          \
     }                                                                          \
     double b = AS_NUMBER(pop());                                               \
@@ -114,6 +119,33 @@ static InterpretResult run() {
       pop();
       break;
     }
+    case OP_GET_GLOBAL:{
+        ObjString * name = READ_STRING();
+        Value value;
+
+        if(!tableGet(&vm.globals, name, &value)){
+          runtimeError("Undefined variable '%s'.", name->chars);
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        push(value);
+        break;
+      }
+    case OP_DEFINE_GLOBAL: {
+      ObjString *name = READ_STRING();
+      tableSet(&vm.globals, name, peek(0));
+      pop();
+      break;
+    }
+    case OP_SET_GLOBAL:{
+        ObjString * name = READ_STRING();
+        if(tableSet(&vm.globals, name, peek(0))){
+          tableDelete(&vm.globals, name);
+          runtimeError("Undefined variable '%s'.", name->chars);
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
+      }
     case OP_EQUAL: {
       Value b = pop();
       Value a = pop();
@@ -136,7 +168,7 @@ static InterpretResult run() {
         double a = AS_NUMBER(pop());
         push(NUMBER_VAL(a + b));
       } else {
-        runTimeError("Operands must be two numbers or two strings.");
+        runtimeError("Operands must be two numbers or two strings.");
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -159,7 +191,7 @@ static InterpretResult run() {
     }
     case OP_NEGATE: {
       if (!IS_NUMBER(peek(0))) {
-        runTimeError("Operand must be number.");
+        runtimeError("Operand must be number.");
         return INTERPRET_RUNTIME_ERROR;
       }
       push(NUMBER_VAL(-AS_NUMBER(pop())));
@@ -177,6 +209,7 @@ static InterpretResult run() {
   }
 #undef READ_BYTE
 #undef READ_CONSTANT
+#undef READ_STRING
 #undef BINARY_OP
 }
 

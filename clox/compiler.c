@@ -147,9 +147,9 @@ static int emitJump(uint8_t instruction) {
   return currentChunk()->count - 2;
 }
 
-static void emitReturn() { 
+static void emitReturn() {
   emitByte(OP_NIL);
-  emitByte(OP_RETURN); 
+  emitByte(OP_RETURN);
 }
 
 static uint8_t makeConstant(Value value) {
@@ -316,7 +316,7 @@ static uint8_t argumentList() {
   if (!check(TOKEN_RIGHT_PAREN)) {
     do {
       expression();
-      if(argCount == 255){
+      if (argCount == 255) {
         error("Can't have more than 255 arguments.");
       }
       argCount++;
@@ -673,6 +673,19 @@ static void printStatement() {
   emitByte(OP_PRINT);
 }
 
+static void returnStatement(){
+  if(current->type == TYPE_SCRIPT){
+    error("Can't return from top-level code.");
+  }
+  if(match(TOKEN_SEMICOLON)){
+    emitReturn();
+  }else{
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after return value");
+    emitByte(OP_RETURN);
+  }
+}
+
 static void whileStatement() {
   int loopStart = currentChunk()->count;
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
@@ -735,6 +748,8 @@ static void statement() {
     forStatement();
   } else if (match(TOKEN_IF)) {
     ifStatement();
+  } else if (match(TOKEN_RETURN)) {
+    returnStatement();
   } else if (match(TOKEN_WHILE)) {
     whileStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {

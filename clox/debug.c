@@ -2,8 +2,8 @@
 #include <stdio.h>
 
 #include "chunk.h"
-#include "object.h"
 #include "debug.h"
+#include "object.h"
 #include "value.h"
 
 void disassembleChunk(Chunk *chunk, const char *name) {
@@ -54,6 +54,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   switch (instruction) {
   case OP_RETURN:
     return simpleInstruction("OP_RETURN", offset);
+  case OP_CLASS:
+    return constantInstruction("OP_CLASS", chunk, offset);
   case OP_CALL:
     return byteInstruction("OP_CALL", chunk, offset);
   case OP_CLOSURE: {
@@ -105,6 +107,10 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return byteInstruction("OP_SET_UPVALUE", chunk, offset);
   case OP_CLOSE_UPVALUE:
     return simpleInstruction("OP_CLOSE_UPVALUE", offset);
+  case OP_SET_PROPERTY:
+    return constantInstruction("OP_SET_PROPERTY", chunk, offset);
+  case OP_GET_PROPERTY:
+    return constantInstruction("OP_GET_PROPERTY", chunk, offset);
   case OP_EQUAL:
     return simpleInstruction("OP_EQUAL", offset);
   case OP_GREATER:

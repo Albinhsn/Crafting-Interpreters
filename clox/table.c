@@ -127,7 +127,7 @@ ObjString *tableFindString(Table *table, const char *chars, int length,
       return entry->key;
     }
 
-    index = (index + 1) % (table->capacity - 1);
+    index = (index + 1) & (table->capacity - 1);
   }
 }
 void markTable(Table * table){

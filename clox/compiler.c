@@ -734,12 +734,13 @@ static void classDeclaration() {
   defineVariable(nameConstant);
 
   ClassCompiler classCompiler;
-  classCompiler.enclosing = currentClass;
   classCompiler.hasSuperClass = false;
+  classCompiler.enclosing = currentClass;
   currentClass = &classCompiler;
 
   if (match(TOKEN_LESS)) {
     consume(TOKEN_IDENTIFIER, "Expect superclass name.");
+    variable(false);
     if (identifiersEqual(&className, &parser.previous)) {
       error("A class can't inherit form itself.");
     }

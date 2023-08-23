@@ -19,6 +19,6 @@ typedef enum {
 
 VM *initVM();
 void freeVM();
-InterpretResult interpret(Chunk *chunk, VM *vm);
+InterpretResult interpret(VM *vm, std::string source);
 
 #endif

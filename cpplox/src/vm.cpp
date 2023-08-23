@@ -2,6 +2,7 @@
 #include "vm.h"
 #include "common.h"
 #include "debug.h"
+#include "compiler.h"
 
 VM *initVM() {
   VM *vm = new VM();
@@ -71,10 +72,7 @@ InterpretResult run(VM *vm) {
   }
 }
 
-InterpretResult interpret(Chunk *chunk, VM *vm) {
-  vm->chunk = chunk;
-  vm->instructions = chunk->code;
-  vm->ip = 0;
-
-  return run(vm);
+InterpretResult interpret(VM *vm, std::string source) {
+  compile(source);
+  return INTERPRET_OK;
 }

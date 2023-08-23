@@ -1,0 +1,10 @@
+# set(SOURCE_FILES
+#   ./scanner.cpp
+#   ./scanner.h
+#   ./vm.cpp
+#   ./vm.h
+#   ./compiler.cpp
+#   ./compiler.h
+#   ./main.cpp
+#   ./common.h
+#   )

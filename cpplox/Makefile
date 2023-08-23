@@ -2,7 +2,16 @@ i:
 	echo "Idk not fixed yet"
 
 c:
-	g++ -o main main.cpp chunk.cpp memory.cpp debug.cpp value.cpp && ./main
+	cd src/ && g++ -o main main.cpp chunk.cpp memory.cpp debug.cpp value.cpp vm.cpp && ./main
+
+bt:
+	cmake -S . -B build && cmake --build build
+	cd build/ && ctest --output-on-failure -V
+t:
+	cd build/ && ctest  --output-on-failure -V 
+
+br:
+	cmake -S . -B build && cmake --build build && cd build/ && ./main $(file)
 
 r:
-	echo "Idk not fixed yet"
+	cmake --build build && cd build/ && ./main $(file)

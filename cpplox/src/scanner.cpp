@@ -1,218 +1,240 @@
-
-
 #include "scanner.h"
-#include "common.h"
+#include "debug.h"
+
+#include <iostream>
 #include <map>
+#include <stdexcept>
 
-static bool isAtEnd(Scanner *scanner) {
-  return scanner->source.size() >= scanner->current;
+Scanner *initScanner(std::string source) {
+  Scanner *scanner = new Scanner();
+  scanner->source = source;
+  scanner->current = 0;
+  scanner->line = 1;
+  scanner->indent = 0;
+
+  return scanner;
 }
 
-static Token makeToken(TokenType type, Scanner *scanner) {
-  Token token;
-  token.type = type;
-  token.literal =
-      scanner->source.substr(scanner->start, scanner->current - scanner->start);
-  token.line = scanner->line;
-
-  return token;
+void resetScanner(Scanner *scanner) {
+  scanner->current = 0;
+  scanner->indent = 0;
+  scanner->line = 1;
+  scanner->source = "";
 }
 
-static Token errorToken(std::string message, Scanner *scanner) {
-  Token token;
-  token.type = TOKEN_ERROR;
-  token.literal = message;
-  token.line = scanner->line;
-
-  return token;
-}
-
-static char advance(Scanner *scanner) {
-  scanner->current++;
+static char getCurrent(Scanner *scanner) {
   return scanner->source[scanner->current];
 }
+static char getPrevious(Scanner *scanner) {
+  return scanner->source[scanner->current - 1];
+}
 
-static bool match(char expected, Scanner *scanner) {
-  if (isAtEnd(scanner))
-    return false;
+static Token *makeToken(Scanner *scanner, std::string literal, TokenType type) {
+  Token *token = new Token();
+  token->literal = literal;
+  token->type = type;
+  token->line = scanner->line;
+  token->indent = scanner->indent;
+#ifdef PRINT_TOKENS
+  debugToken(token);
+#endif
+  return token;
+}
+static bool isAtEnd(Scanner *scanner) {
+  return scanner->source[scanner->current] == '\0';
+}
 
-  if (scanner->source[scanner->current] != expected) {
-    return false;
+static void advance(Scanner *scanner) { scanner->current++; }
+
+static bool match(Scanner *scanner, char needle) {
+  if (!isAtEnd(scanner) && scanner->source[scanner->current] == needle) {
+    advance(scanner);
+    return true;
+  }
+  return false;
+}
+static bool isDigit(char c) { return '0' <= c && '9' >= c; }
+
+static Token *parseNumber(Scanner *scanner) {
+  int current = scanner->current - 1;
+  while (!isAtEnd(scanner) && isDigit(getCurrent(scanner))) {
+    advance(scanner);
+  }
+  if (getCurrent(scanner) == '.') {
+    advance(scanner);
+  }
+  while (!isAtEnd(scanner) && isDigit(getCurrent(scanner))) {
+    advance(scanner);
+  }
+  std::string literal =
+      scanner->source.substr(current, scanner->current - current);
+  TokenType type = TOKEN_NUMBER;
+  return makeToken(scanner, literal, type);
+}
+static TokenType isKeyword(std::string literal) {
+  std::map<std::string, TokenType> m{
+      {"struct", TOKEN_STRUCT}, {"else", TOKEN_ELSE}, {"false", TOKEN_FALSE},
+      {"for", TOKEN_FOR},       {"if", TOKEN_IF},     {"nil", TOKEN_NIL},
+      {"return", TOKEN_RETURN}, {"true", TOKEN_TRUE}, {"while", TOKEN_WHILE},
+  };
+  if (m.count(literal)) {
+    return m[literal];
+  }
+  return TOKEN_IDENTIFIER;
+}
+
+static bool isAlpha(char c) {
+  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
+}
+
+static Token *parseIdentifier(Scanner *scanner) {
+  int current = scanner->current - 1;
+  while (!isAtEnd(scanner) && isAlpha(getCurrent(scanner))) {
+    advance(scanner);
+  }
+  std::string literal =
+      scanner->source.substr(current, scanner->current - current);
+  TokenType type = isKeyword(literal);
+  return makeToken(scanner, literal, type);
+}
+
+static Token *parseString(Scanner *scanner) {
+  int current = scanner->current;
+  while (!isAtEnd(scanner) && getCurrent(scanner) != '"' &&
+         getCurrent(scanner) != '\n') {
+    advance(scanner);
   }
 
-  scanner->current++;
-  return true;
-}
-static char peek(Scanner *scanner) { return scanner->source[scanner->current]; }
-
-static char peekNext(Scanner *scanner) {
   if (isAtEnd(scanner)) {
-    return '\0';
+    throw std::invalid_argument("Hit eof with unterminated string.");
   }
-  return scanner->source[scanner->current + 1];
+  std::string literal =
+      scanner->source.substr(current, scanner->current - current);
+  TokenType type = TOKEN_STRING;
+  scanner->current++;
+  return makeToken(scanner, literal, type);
 }
 
-static void skipWhitespace(Scanner *scanner) {
+void skipWhitespace(Scanner *scanner) {
   for (;;) {
-    char c = peek(scanner);
+    if (isAtEnd(scanner)) {
+      return;
+    }
+    char c = getCurrent(scanner);
     switch (c) {
-    case ' ':
-    case '\r':
-    case '\t': {
-      advance(scanner);
+    case '/': {
+      if (match(scanner, '/')) {
+        while (!isAtEnd(scanner) and !match(scanner, '\n')) {
+          advance(scanner);
+        }
+        scanner->line++;
+      }
+      return;
+    }
+    case ' ': {
+      scanner->indent++;
       break;
     }
     case '\n': {
       scanner->line++;
-      advance(scanner);
+      scanner->indent = 0;
       break;
     }
-    case '/': {
-      if (peekNext(scanner) == '/') {
-        while (peek(scanner) != '\n' && !isAtEnd(scanner)) {
-          advance(scanner);
-        }
-      } else {
-        return;
-      }
+    case '\t': {
+      scanner->indent += 4;
       break;
     }
     default:
       return;
     }
+    scanner->current++;
   }
 }
 
-static Token string(Scanner *scanner) {
-  while (peek(scanner) != '"' && !isAtEnd(scanner)) {
-    if (peek(scanner) == '\n') {
-      scanner->line++;
-    }
-    advance(scanner);
-  }
-
-  if (isAtEnd(scanner)) {
-    return errorToken("Unterminated string.", scanner);
-  }
-
-  advance(scanner);
-  return makeToken(TOKEN_STRING, scanner);
-}
-
-static bool isDigit(char c) { return c >= '0' && c <= '9'; }
-
-static Token number(Scanner *scanner) {
-  while (isDigit(peek(scanner))) {
-    advance(scanner);
-  }
-
-  if (peek(scanner) == '.' && isDigit(peekNext(scanner))) {
-    advance(scanner);
-    while (isDigit(peek(scanner))) {
-      advance(scanner);
-    }
-  }
-
-  return makeToken(TOKEN_NUMBER, scanner);
-}
-
-static bool isAlpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
-}
-
-static TokenType identifierType(Scanner *scanner) {
-  std::string name =
-      scanner->source.substr(scanner->start, scanner->current - scanner->start);
-  std::map<std::string, TokenType> m = {
-      {"and", TOKEN_AND},     {"struct", TOKEN_STRUCT}, {"else", TOKEN_ELSE},
-      {"if", TOKEN_IF},       {"nil", TOKEN_NIL},       {"or", TOKEN_OR},
-      {"print", TOKEN_PRINT}, {"return", TOKEN_RETURN}, {"var", TOKEN_VAR},
-      {"while", TOKEN_WHILE}, {"for", TOKEN_FOR},       {"false", TOKEN_FALSE},
-      {"true", TOKEN_TRUE},
-  };
-  return m.count(name) == 0 ? TOKEN_IDENTIFIER : m[name];
-}
-
-static Token identifier(Scanner *scanner) {
-  while (isAlpha(peek(scanner)) || isDigit(peek(scanner))) {
-    advance(scanner);
-  }
-
-  return makeToken(identifierType(scanner), scanner);
-}
-
-Token scanToken(Scanner *scanner) {
+Token *scanToken(Scanner *scanner) {
   skipWhitespace(scanner);
   if (isAtEnd(scanner)) {
-    return makeToken(TOKEN_EOF, scanner);
+    return makeToken(scanner, "EOF", TOKEN_EOF);
   }
-
-  char c = advance(scanner);
-  if (isAlpha(c)) {
-    return identifier(scanner);
-  }
+  scanner->current++;
+  char c = getPrevious(scanner);
   if (isDigit(c)) {
-    return number(scanner);
+    return parseNumber(scanner);
   }
-
+  if (isAlpha(c)) {
+    return parseIdentifier(scanner);
+  }
   switch (c) {
+  case '"': {
+    return parseString(scanner);
+  }
   case '(': {
-    return makeToken(TOKEN_LEFT_PAREN, scanner);
+    return makeToken(scanner, "(", TOKEN_LEFT_PAREN);
   }
   case ')': {
-    return makeToken(TOKEN_RIGHT_PAREN, scanner);
+    return makeToken(scanner, ")", TOKEN_RIGHT_PAREN);
   }
   case '{': {
-    return makeToken(TOKEN_LEFT_BRACE, scanner);
+    return makeToken(scanner, "{", TOKEN_LEFT_BRACE);
   }
   case '}': {
-    return makeToken(TOKEN_RIGHT_BRACE, scanner);
-  }
-  case ';': {
-    return makeToken(TOKEN_SEMICOLON, scanner);
+    return makeToken(scanner, "}", TOKEN_RIGHT_BRACE);
   }
   case ',': {
-    return makeToken(TOKEN_COMMA, scanner);
+    return makeToken(scanner, ",", TOKEN_COMMA);
   }
   case '.': {
-    return makeToken(TOKEN_DOT, scanner);
-  }
-  case '-': {
-    return makeToken(TOKEN_MINUS, scanner);
+    return makeToken(scanner, ".", TOKEN_DOT);
   }
   case '+': {
-    return makeToken(TOKEN_PLUS, scanner);
-  }
-  case '/': {
-    return makeToken(TOKEN_SLASH, scanner);
+    return makeToken(scanner, "+", TOKEN_PLUS);
   }
   case '*': {
-    return makeToken(TOKEN_STAR, scanner);
+    return makeToken(scanner, "*", TOKEN_STAR);
   }
-  case '!':
-    return makeToken(match('=', scanner) ? TOKEN_BANG_EQUAL : TOKEN_BANG,
-                     scanner);
-  case '=':
-    return makeToken(match('=', scanner) ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL,
-                     scanner);
-  case '<':
-    return makeToken(match('=', scanner) ? TOKEN_LESS_EQUAL : TOKEN_LESS,
-                     scanner);
-  case '>':
-    return makeToken(match('=', scanner) ? TOKEN_GREATER_EQUAL : TOKEN_GREATER,
-                     scanner);
-  case '"':
-    return string(scanner);
+    // case '?': {
+    //   return makeToken(scanner, "?", TOKEN_QUESTION);
+    // }
+    // case ':': {
+    //   return makeToken(scanner, ":", TOKEN_COLON);
+    // }
+  case '!': {
+    if (match(scanner, '=')) {
+      return makeToken(scanner, "!=", TOKEN_BANG_EQUAL);
+    }
+    return makeToken(scanner, "!", TOKEN_BANG);
   }
-
-  return errorToken("Unexpected character.", scanner);
-}
-
-Scanner *initScanner(std::string source) {
-  Scanner *scanner = new Scanner();
-  scanner->source = source;
-  scanner->line = 1;
-  scanner->current = 0;
-
-  return scanner;
+  case '=': {
+    if (match(scanner, '=')) {
+      return makeToken(scanner, "==", TOKEN_EQUAL_EQUAL);
+    }
+    return makeToken(scanner, "=", TOKEN_EQUAL);
+  }
+  case '<': {
+    if (match(scanner, '=')) {
+      return makeToken(scanner, "<=", TOKEN_LESS_EQUAL);
+    }
+    return makeToken(scanner, "<", TOKEN_LESS);
+  }
+  case '>': {
+    if (match(scanner, '=')) {
+      return makeToken(scanner, ">=", TOKEN_GREATER_EQUAL);
+    }
+    return makeToken(scanner, ">", TOKEN_GREATER);
+  }
+  case '-': {
+    if (match(scanner, '>')) {
+      return makeToken(scanner, "->", TOKEN_ARROW);
+    }
+    return makeToken(scanner, "-", TOKEN_MINUS);
+  }
+  case '/': {
+    return makeToken(scanner, "/", TOKEN_SLASH);
+  }
+  default:
+    std::string exception = "Unknown characther '";
+    exception.push_back(c);
+    exception.append("'.");
+    throw std::invalid_argument(exception);
+  }
 }

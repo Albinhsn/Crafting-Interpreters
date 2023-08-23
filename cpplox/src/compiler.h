@@ -2,7 +2,8 @@
 #define cpplox_compiler_h
 
 #include "common.h"
+#include "vm.h"
 
-void compile(std::string source);
+bool compile(std::string source, Chunk *chunk);
 
 #endif

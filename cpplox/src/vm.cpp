@@ -13,9 +13,26 @@ VM *initVM() {
 
 void freeVM() {}
 
+static void runtimeError(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fputs("\n", stderr);
+
+  size_t instruction = vm.ip - vm.chunk->code - 1;
+  int line = vm.chunk->lines[instruction];
+  fprintf(stderr, "[line %d] in script\n", line);
+  resetStack();
+}
+
 static uint8_t readByte(VM *vm) { return vm->instructions[vm->ip++]; }
 
 static Value readConstant(VM *vm) { return vm->chunk->constants[readByte(vm)]; }
+
+static Value peek(VM *vm, int distance) {
+  return vm->stack->get(-1 - distance);
+}
 
 InterpretResult run(VM *vm) {
 #define BINARY_OP(op)                                                          \
@@ -60,7 +77,11 @@ InterpretResult run(VM *vm) {
       break;
     }
     case OP_NEGATE: {
-      vm->stack->push(-vm->stack->pop());
+      if (!IS_NUMBER(peek(0))) {
+        runtimeError("Operand must be a number.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      vm->stack->push(NUMBER_VAL(-AS_NUMBER(*vm->stack->pop())));
       break;
     }
     case OP_RETURN: {

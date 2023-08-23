@@ -24,23 +24,21 @@ public:
     head = NULL;
     length = 0;
   }
-  Value peek() {
+  Value *peek() {
     if (length == 0) {
       return NULL;
     }
-    return head->value;
+    return &head->value;
   }
 
-  Value pop() {
+  Value *pop() {
     if (length == 0) {
       return NULL;
     }
     length--;
     Node *oldHead = head;
     head = head->next;
-    Value out = oldHead->value;
-    delete (oldHead);
-    return out;
+    return &oldHead->value;
   }
   void push(Value value) {
     Node *node = new Node();

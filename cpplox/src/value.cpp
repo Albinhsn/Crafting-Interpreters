@@ -16,4 +16,4 @@ void freeValueArray(ValueArray *array) {
   initValueArray(array);
 }
 
-void printValue(Value value) { std::cout << value; }
+void printValue(Value value) { std::cout << AS_NUMBER(value); }

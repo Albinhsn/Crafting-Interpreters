@@ -189,7 +189,7 @@ static void emitConstant(Parser *parser, Value value) {
 
 static void number(Parser *parser, Scanner *scanner) {
   double value = std::stod(parser->previous->literal);
-  emitConstant(parser, value);
+  emitConstant(parser, NUMBER_VAL(value));
 }
 
 static void prefixRule(Parser *parser, Scanner *scanner, TokenType type) {

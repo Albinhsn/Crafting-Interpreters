@@ -3,7 +3,10 @@
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include "object.h"
+#include "value.h"
 #include <cstdarg>
+#include <cstring>
 
 VM *initVM() {
   VM *vm = new VM();
@@ -40,6 +43,16 @@ static Value peek(VM *vm, int distance) { return vm->stack->get(distance); }
 
 static bool isFalsey(Value value) {
   return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+static void concatenate(VM *vm) {
+  std::string a = AS_STRING(*vm->stack->pop());
+  std::string b = AS_STRING(*vm->stack->pop());
+  std::string c = b.append(a);
+  std::cout << "c " << c.c_str() << "\n";
+  Value value = STRING_VAL(c.c_str());
+  std::cout << "value " << value.as.chars << "\n";
+  vm->stack->push(value);
 }
 
 InterpretResult run(VM *vm) {
@@ -101,7 +114,16 @@ InterpretResult run(VM *vm) {
       break;
     }
     case OP_ADD: {
-      BINARY_OP(NUMBER_VAL, +);
+      if (IS_STRING(peek(vm, 0)) && IS_STRING(peek(vm, 1))) {
+        concatenate(vm);
+      } else if (IS_NUMBER(peek(vm, 0)) && IS_NUMBER(peek(vm, 1))) {
+        double b = AS_NUMBER(*vm->stack->pop());
+        double a = AS_NUMBER(*vm->stack->pop());
+        vm->stack->push(NUMBER_VAL(a + b));
+      } else {
+        runtimeError(vm, "Operands must be two number or two strings");
+        return INTERPRET_RUNTIME_ERROR;
+      }
       break;
     }
     case OP_SUBTRACT: {

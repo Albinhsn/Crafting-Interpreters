@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "value.h"
 #include <cstdlib>
+#include <cstring>
 
 void initValueArray(ValueArray *array) { array = new std::vector<Value>(); }
 
@@ -27,6 +28,9 @@ bool valuesEqual(Value a, Value b) {
     return true;
   case VAL_NUMBER:
     return AS_NUMBER(a) == AS_NUMBER(b);
+  case VAL_STRING: {
+    return strcmp(AS_STRING(a), AS_STRING(b)) == 0;
+  }
   default:
     return false;
   }

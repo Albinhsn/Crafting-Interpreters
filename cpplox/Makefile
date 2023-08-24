@@ -2,7 +2,7 @@ i:
 	echo "Idk not fixed yet"
 
 c:
-	cd src/ && g++ -o main main.cpp chunk.cpp memory.cpp debug.cpp value.cpp vm.cpp compiler.cpp scanner.cpp && ./main
+	cd src/ && g++ -o main main.cpp chunk.cpp memory.cpp debug.cpp value.cpp vm.cpp compiler.cpp scanner.cpp object.cpp && ./main
 
 bt:
 	cmake -S . -B build && cmake --build build

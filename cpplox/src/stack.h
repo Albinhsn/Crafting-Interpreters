@@ -2,6 +2,7 @@
 #define cpplox_stack_h
 
 #include "value.h"
+#include <stdexcept>
 
 typedef struct Node {
   Value value;
@@ -18,27 +19,28 @@ public:
     for (int i = 0; i < idx; i++) {
       curr = curr->next;
     }
+    std::cout << "Getting - " << curr->value.as.chars << "\n";
     return curr->value;
   }
   void init() {
     head = NULL;
     length = 0;
   }
-  Value *peek() {
+  Value peek() {
     if (length == 0) {
-      return NULL;
+      throw std::invalid_argument("Can't peek with 0 length");
     }
-    return &head->value;
+    return head->value;
   }
 
-  Value *pop() {
+  Value pop() {
     if (length == 0) {
-      return NULL;
+      throw std::invalid_argument("Can't pop with 0 length");
     }
     length--;
-    Node *oldHead = head;
+    Node oldHead = *head;
     head = head->next;
-    return &oldHead->value;
+    return oldHead.value;
   }
   void push(Value value) {
     Node *node = new Node();

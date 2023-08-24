@@ -21,7 +21,7 @@ TEST(TestStack, TestStack) {
   EXPECT_EQ(stack->length, 2);
 
   Value *v4 = new Value(11.0);
-  stack->push(v4);
+  stack->push(*v4);
   EXPECT_EQ(stack->pop(), 11.0);
 
   EXPECT_EQ(stack->pop(), 7.0);

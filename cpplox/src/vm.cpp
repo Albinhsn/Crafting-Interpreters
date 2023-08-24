@@ -46,12 +46,12 @@ static bool isFalsey(Value value) {
 }
 
 static void concatenate(VM *vm) {
-  std::string a = AS_STRING(*vm->stack->pop());
-  std::string b = AS_STRING(*vm->stack->pop());
+  std::string a = AS_STRING(vm->stack->pop());
+  std::string b = AS_STRING(vm->stack->pop());
   std::string c = b.append(a);
-  std::cout << "c " << c.c_str() << "\n";
   Value value = STRING_VAL(c.c_str());
-  std::cout << "value " << value.as.chars << "\n";
+  value.type = VAL_STRING;
+  std::cout << "concatenated " << value.as.chars << "\n";
   vm->stack->push(value);
 }
 
@@ -62,9 +62,8 @@ InterpretResult run(VM *vm) {
       runtimeError(vm, "Operands must be numbers.");                           \
       return INTERPRET_RUNTIME_ERROR;                                          \
     }                                                                          \
-    std::cout << "GOT\n";                                                      \
-    double b = AS_NUMBER(*vm->stack->pop());                                   \
-    double a = AS_NUMBER(*vm->stack->pop());                                   \
+    double b = AS_NUMBER(vm->stack->pop());                                    \
+    double a = AS_NUMBER(vm->stack->pop());                                    \
     vm->stack->push(valueType(a op b));                                        \
   } while (false)
 
@@ -100,8 +99,8 @@ InterpretResult run(VM *vm) {
       break;
     }
     case OP_EQUAL: {
-      Value b = *vm->stack->pop();
-      Value a = *vm->stack->pop();
+      Value b = vm->stack->pop();
+      Value a = vm->stack->pop();
       vm->stack->push(BOOL_VAL(valuesEqual(a, b)));
       break;
     }
@@ -117,8 +116,8 @@ InterpretResult run(VM *vm) {
       if (IS_STRING(peek(vm, 0)) && IS_STRING(peek(vm, 1))) {
         concatenate(vm);
       } else if (IS_NUMBER(peek(vm, 0)) && IS_NUMBER(peek(vm, 1))) {
-        double b = AS_NUMBER(*vm->stack->pop());
-        double a = AS_NUMBER(*vm->stack->pop());
+        double b = AS_NUMBER(vm->stack->pop());
+        double a = AS_NUMBER(vm->stack->pop());
         vm->stack->push(NUMBER_VAL(a + b));
       } else {
         runtimeError(vm, "Operands must be two number or two strings");
@@ -139,7 +138,7 @@ InterpretResult run(VM *vm) {
       break;
     }
     case OP_NOT: {
-      vm->stack->push(BOOL_VAL(isFalsey(*vm->stack->pop())));
+      vm->stack->push(BOOL_VAL(isFalsey(vm->stack->pop())));
       break;
     }
     case OP_NEGATE: {
@@ -147,11 +146,11 @@ InterpretResult run(VM *vm) {
         runtimeError(vm, "Operand must be a number.");
         return INTERPRET_RUNTIME_ERROR;
       }
-      vm->stack->push(NUMBER_VAL(-AS_NUMBER(*vm->stack->pop())));
+      vm->stack->push(NUMBER_VAL(-AS_NUMBER(vm->stack->pop())));
       break;
     }
     case OP_RETURN: {
-      printValue(*vm->stack->pop());
+      printValue(vm->stack->pop());
       std::cout << "\n";
       return INTERPRET_OK;
     }

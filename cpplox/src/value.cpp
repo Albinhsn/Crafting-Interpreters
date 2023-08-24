@@ -46,5 +46,8 @@ void printValue(Value value) {
     std::cout << AS_NUMBER(value);
     break;
   }
+  case VAL_STRING: {
+    std::cout << AS_STRING(value);
+  }
   }
 }

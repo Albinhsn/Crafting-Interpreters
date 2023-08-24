@@ -3,6 +3,7 @@
 #include "compiler.h"
 #include "chunk.h"
 #include "common.h"
+#include "object.h"
 #include "scanner.h"
 #include <cstdint>
 #include <cstdio>
@@ -94,7 +95,6 @@ static uint8_t makeConstant(Parser *parser, Value value) {
     error(parser, "Too many constants in one chunk.");
     return 0;
   }
-
   return (uint8_t)constant;
 }
 
@@ -236,6 +236,14 @@ static void number(Parser *parser, Scanner *scanner) {
   emitConstant(parser, NUMBER_VAL(value));
 }
 
+static void string(Parser *parser, Scanner *scanner) {
+  Value value;
+  value.type = VAL_STRING;
+  value.as.chars = parser->previous->literal.c_str();
+  std::cout << "value " << value.as.chars << "\n";
+  emitConstant(parser, value);
+}
+
 static void literal(Parser *parser, Scanner *scanner) {
   switch (parser->previous->type) {
   case TOKEN_FALSE: {
@@ -264,6 +272,10 @@ static void prefixRule(Parser *parser, Scanner *scanner, TokenType type) {
   }
   case TOKEN_MINUS: {
     unary(parser, scanner);
+    break;
+  }
+  case TOKEN_STRING: {
+    string(parser, scanner);
     break;
   }
   case TOKEN_NUMBER: {

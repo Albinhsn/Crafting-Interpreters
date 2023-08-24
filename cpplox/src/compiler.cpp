@@ -113,9 +113,21 @@ static Precedence getPrecedence(TokenType type) {
   case TOKEN_PLUS:
     return PREC_TERM;
   case TOKEN_SLASH:
-    return PREC_TERM;
+    return PREC_FACTOR;
   case TOKEN_STAR:
-    return PREC_TERM;
+    return PREC_FACTOR;
+  case TOKEN_BANG_EQUAL:
+    return PREC_EQUALITY;
+  case TOKEN_EQUAL_EQUAL:
+    return PREC_EQUALITY;
+  case TOKEN_GREATER:
+    return PREC_COMPARISON;
+  case TOKEN_GREATER_EQUAL:
+    return PREC_COMPARISON;
+  case TOKEN_LESS:
+    return PREC_COMPARISON;
+  case TOKEN_LESS_EQUAL:
+    return PREC_COMPARISON;
   default:
     return PREC_NONE;
   }
@@ -127,8 +139,11 @@ static void parsePrecedence(Parser *parser, Scanner *scanner,
   prefixRule(parser, scanner, parser->previous->type);
   while (precedence <= getPrecedence(parser->current->type)) {
     advance(parser, scanner);
+    std::cout << "Calling infix rule " << parser->current->literal << "\n";
     infixRule(parser, scanner, parser->previous->type);
   }
+  std::cout << "Current less than precedence " << parser->current->literal
+            << "\n";
 }
 
 static void expression(Parser *parser, Scanner *scanner) {
@@ -138,9 +153,34 @@ static void expression(Parser *parser, Scanner *scanner) {
 static void binary(Parser *parser, Scanner *scanner) {
   TokenType operatorType = parser->previous->type;
 
-  parsePrecedence(parser, scanner, (Precedence)(getPrecedence(operatorType) + 1));
+  parsePrecedence(parser, scanner,
+                  (Precedence)(getPrecedence(operatorType) + 1));
 
   switch (operatorType) {
+  case TOKEN_BANG_EQUAL: {
+    emitBytes(parser, OP_EQUAL, OP_NOT);
+    break;
+  }
+  case TOKEN_EQUAL_EQUAL: {
+    emitByte(parser, OP_EQUAL);
+    break;
+  }
+  case TOKEN_GREATER: {
+    emitByte(parser, OP_GREATER);
+    break;
+  }
+  case TOKEN_GREATER_EQUAL: {
+    emitBytes(parser, OP_LESS, OP_NOT);
+    break;
+  }
+  case TOKEN_LESS: {
+    emitByte(parser, OP_LESS);
+    break;
+  }
+  case TOKEN_LESS_EQUAL: {
+    emitBytes(parser, OP_GREATER, OP_NOT);
+    break;
+  }
   case TOKEN_PLUS: {
     emitByte(parser, OP_ADD);
     break;
@@ -177,6 +217,10 @@ static void unary(Parser *parser, Scanner *scanner) {
     emitByte(parser, OP_NEGATE);
     break;
   }
+  case TOKEN_BANG: {
+    emitByte(parser, OP_NOT);
+    break;
+  }
   default: {
     return;
   }
@@ -192,6 +236,26 @@ static void number(Parser *parser, Scanner *scanner) {
   emitConstant(parser, NUMBER_VAL(value));
 }
 
+static void literal(Parser *parser, Scanner *scanner) {
+  switch (parser->previous->type) {
+  case TOKEN_FALSE: {
+    emitByte(parser, OP_FALSE);
+    break;
+  }
+  case TOKEN_NIL: {
+    emitByte(parser, OP_NIL);
+    break;
+  }
+  case TOKEN_TRUE: {
+    emitByte(parser, OP_TRUE);
+    break;
+  }
+  default: {
+    return;
+  }
+  }
+}
+
 static void prefixRule(Parser *parser, Scanner *scanner, TokenType type) {
   switch (type) {
   case TOKEN_LEFT_PAREN: {
@@ -204,6 +268,22 @@ static void prefixRule(Parser *parser, Scanner *scanner, TokenType type) {
   }
   case TOKEN_NUMBER: {
     number(parser, scanner);
+    break;
+  }
+  case TOKEN_FALSE: {
+    literal(parser, scanner);
+    break;
+  }
+  case TOKEN_TRUE: {
+    literal(parser, scanner);
+    break;
+  }
+  case TOKEN_NIL: {
+    literal(parser, scanner);
+    break;
+  }
+  case TOKEN_BANG: {
+    unary(parser, scanner);
     break;
   }
   default: {
@@ -226,6 +306,30 @@ static void infixRule(Parser *parser, Scanner *scanner, TokenType type) {
     break;
   }
   case TOKEN_SLASH: {
+    binary(parser, scanner);
+    break;
+  }
+  case TOKEN_BANG_EQUAL: {
+    binary(parser, scanner);
+    break;
+  }
+  case TOKEN_EQUAL_EQUAL: {
+    binary(parser, scanner);
+    break;
+  }
+  case TOKEN_GREATER: {
+    binary(parser, scanner);
+    break;
+  }
+  case TOKEN_GREATER_EQUAL: {
+    binary(parser, scanner);
+    break;
+  }
+  case TOKEN_LESS: {
+    binary(parser, scanner);
+    break;
+  }
+  case TOKEN_LESS_EQUAL: {
     binary(parser, scanner);
     break;
   }

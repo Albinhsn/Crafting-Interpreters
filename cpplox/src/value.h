@@ -27,6 +27,7 @@ typedef struct {
 typedef std::vector<Value> ValueArray;
 
 void printValue(Value value);
+bool valuesEqual(Value a, Value b);
 void initValueArray(ValueArray *array);
 void writeValueArray(ValueArray *array, Value value);
 void freeValueArray(ValueArray *array, Value value);

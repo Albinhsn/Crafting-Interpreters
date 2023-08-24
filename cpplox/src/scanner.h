@@ -14,6 +14,7 @@ typedef enum {
   // TOKEN_RIGHT_BRACKET, //]
   TOKEN_COMMA,
   TOKEN_DOT,
+  TOKEN_MINUS,
   TOKEN_PLUS,
   TOKEN_SEMICOLON,
   TOKEN_SLASH,
@@ -30,7 +31,6 @@ typedef enum {
   TOKEN_GREATER_EQUAL,
   TOKEN_LESS,
   TOKEN_LESS_EQUAL,
-  TOKEN_MINUS,
   TOKEN_ARROW, // ->
 
   // Literals.
@@ -61,7 +61,6 @@ typedef enum {
   TOKEN_OR,
   TOKEN_VAR,
   TOKEN_ERROR,
-
 
   TOKEN_EOF
 } TokenType;

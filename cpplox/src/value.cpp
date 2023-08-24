@@ -51,7 +51,7 @@ void printValue(Value value) {
     break;
   }
   case VAL_STRING: {
-    std::cout << AS_STRING(value);
+    printf("%s", AS_STRING(value));
   }
   }
 }

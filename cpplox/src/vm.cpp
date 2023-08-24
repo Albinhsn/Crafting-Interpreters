@@ -51,7 +51,6 @@ static void concatenate(VM *vm) {
   std::string c = b.append(a);
   Value value = STRING_VAL(c.c_str());
   value.type = VAL_STRING;
-  std::cout << "concatenated " << value.as.chars << "\n";
   vm->stack->push(value);
 }
 

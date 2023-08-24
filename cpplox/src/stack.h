@@ -19,7 +19,6 @@ public:
     for (int i = 0; i < idx; i++) {
       curr = curr->next;
     }
-    std::cout << "Getting - " << curr->value.as.chars << "\n";
     return curr->value;
   }
   void init() {

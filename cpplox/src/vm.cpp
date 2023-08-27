@@ -7,11 +7,15 @@
 #include "value.h"
 #include <cstdarg>
 #include <cstring>
+#include <map>
 
 VM *initVM() {
   VM *vm = new VM();
   vm->stack = new Stack();
   vm->stack->init();
+  vm->strings = std::map<std::string, Value>();
+  vm->globals = std::map<std::string, Value>();
+
   return vm;
 }
 
@@ -50,7 +54,6 @@ static void concatenate(VM *vm) {
   std::string b = AS_STRING(vm->stack->pop());
   std::string c = b.append(a);
   Value value = STRING_VAL(c.c_str());
-  value.type = VAL_STRING;
   vm->stack->push(value);
 }
 
@@ -95,6 +98,36 @@ InterpretResult run(VM *vm) {
     }
     case OP_FALSE: {
       vm->stack->push(BOOL_VAL(false));
+      break;
+    }
+    case OP_POP: {
+      vm->stack->pop();
+      break;
+    }
+    case OP_GET_GLOBAL: {
+      const char *name = AS_STRING(readConstant(vm));
+      if (!vm->globals.count(name)) {
+        std::string stdname = name;
+        runtimeError(vm, "Undefined variable '" + stdname + "'.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      Value value = vm->globals[name];
+      vm->stack->push(value);
+      break;
+    }
+    case OP_DEFINE_GLOBAL: {
+      vm->globals[AS_STRING(readConstant(vm))] = peek(vm, 0);
+      vm->stack->pop();
+      break;
+    }
+    case OP_SET_GLOBAL: {
+      const char *name = AS_STRING(readConstant(vm));
+      if (!vm->globals.count(name)) {
+        std::string msg = name;
+        runtimeError(vm, "Undefined variable '" + msg + "'.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      vm->globals[name] = peek(vm, 0);
       break;
     }
     case OP_EQUAL: {
@@ -148,9 +181,12 @@ InterpretResult run(VM *vm) {
       vm->stack->push(NUMBER_VAL(-AS_NUMBER(vm->stack->pop())));
       break;
     }
-    case OP_RETURN: {
+    case OP_PRINT: {
       printValue(vm->stack->pop());
       std::cout << "\n";
+      break;
+    }
+    case OP_RETURN: {
       return INTERPRET_OK;
     }
     }
@@ -168,8 +204,10 @@ InterpretResult interpret(VM *vm, std::string source) {
   vm->chunk = chunk;
   vm->instructions = chunk->code;
 
+  std::cout << "\n== Running in vm == ";
   InterpretResult result = run(vm);
 
   freeChunk(chunk);
+  vm->instructions = std::vector<uint8_t>();
   return result;
 }

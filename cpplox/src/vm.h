@@ -3,10 +3,14 @@
 
 #include "chunk.h"
 #include "stack.h"
+#include <map>
+#include <string>
 
 typedef struct {
   Chunk *chunk;
   std::vector<uint8_t> instructions;
+  std::map<std::string, Value> strings;
+  std::map<std::string, Value> globals;
   int ip;
   Stack *stack;
 } VM;

@@ -52,6 +52,11 @@ void printValue(Value value) {
   }
   case VAL_STRING: {
     printf("%s", AS_STRING(value));
+    break;
+  }
+  case VAL_OBJ: {
+    printf("%s", AS_STRING(value));
+    break;
   }
   }
 }

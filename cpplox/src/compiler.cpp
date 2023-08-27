@@ -15,8 +15,13 @@
 #include "debug.h"
 #endif
 
-static void prefixRule(Parser *parser, Scanner *scanner, TokenType type);
-static void infixRule(Parser *parser, Scanner *scanner, TokenType type);
+static void statement(Parser *parser, Scanner *scanner);
+static void declaration(Parser *parser, Scanner *scanner);
+
+static void prefixRule(Parser *parser, Scanner *scanner, TokenType type,
+                       bool canAssign);
+static void infixRule(Parser *parser, Scanner *scanner, TokenType type,
+                      bool canAssign);
 static Parser *initParser(Chunk *chunk) {
   Parser *parser = new Parser();
   parser->current = NULL;
@@ -75,6 +80,18 @@ static void consume(Parser *parser, Scanner *scanner, TokenType type,
   }
 
   errorAtCurrent(parser, message);
+}
+
+static bool check(TokenType type, Parser *parser) {
+  return parser->current->type == type;
+}
+
+static bool match(Parser *parser, Scanner *scanner, TokenType type) {
+  if (!check(type, parser)) {
+    return false;
+  }
+  advance(parser, scanner);
+  return true;
 }
 
 static void emitByte(Parser *parser, uint8_t byte) {
@@ -136,18 +153,88 @@ static Precedence getPrecedence(TokenType type) {
 static void parsePrecedence(Parser *parser, Scanner *scanner,
                             Precedence precedence) {
   advance(parser, scanner);
-  prefixRule(parser, scanner, parser->previous->type);
+  bool canAssign = precedence <= PREC_ASSIGNMENT;
+  prefixRule(parser, scanner, parser->previous->type, canAssign);
   while (precedence <= getPrecedence(parser->current->type)) {
     advance(parser, scanner);
-    std::cout << "Calling infix rule " << parser->current->literal << "\n";
-    infixRule(parser, scanner, parser->previous->type);
+    infixRule(parser, scanner, parser->previous->type, canAssign);
   }
-  std::cout << "Current less than precedence " << parser->current->literal
-            << "\n";
+  if (canAssign && match(parser, scanner, TOKEN_EQUAL)) {
+    error(parser, "Invalid assignment target.");
+  }
+}
+
+static uint8_t identifierConstant(Parser *parser) {
+  Value value;
+  value.type = VAL_OBJ;
+  value.as.chars = parser->previous->literal.c_str();
+  return makeConstant(parser, value);
+}
+
+static uint8_t parseVariable(Parser *parser, Scanner *scanner,
+                             const char *errorMessage) {
+  consume(parser, scanner, TOKEN_IDENTIFIER, errorMessage);
+  return identifierConstant(parser);
+}
+
+static void defineVariable(Parser *parser, uint8_t global) {
+  emitBytes(parser, OP_DEFINE_GLOBAL, global);
 }
 
 static void expression(Parser *parser, Scanner *scanner) {
   parsePrecedence(parser, scanner, PREC_ASSIGNMENT);
+}
+
+static void varDeclaration(Parser *parser, Scanner *scanner) {
+  uint8_t global = parseVariable(parser, scanner, "Expect variable name.");
+
+  if (match(parser, scanner, TOKEN_EQUAL)) {
+    expression(parser, scanner);
+  } else {
+    emitByte(parser, OP_NIL);
+  }
+  consume(parser, scanner, TOKEN_SEMICOLON,
+          "Expect ';' after variable declaration");
+
+  defineVariable(parser, global);
+}
+
+static void expressionStatement(Parser *parser, Scanner *scanner) {
+  expression(parser, scanner);
+  consume(parser, scanner, TOKEN_SEMICOLON, "Expect ';' after expression.");
+  emitByte(parser, OP_POP);
+}
+
+static void printStatement(Parser *parser, Scanner *scanner) {
+  expression(parser, scanner);
+  consume(parser, scanner, TOKEN_SEMICOLON, "Expect ';' after value.");
+  emitByte(parser, OP_PRINT);
+}
+
+static void synchronize(Parser *parser, Scanner *scanner) {
+  parser->panicMode = false;
+
+  while (parser->current->type != TOKEN_EOF) {
+    if (parser->previous->type == TOKEN_SEMICOLON) {
+      return;
+    }
+    switch (parser->current->type) {
+    case TOKEN_STRUCT:
+    case TOKEN_FUN:
+    case TOKEN_VAR:
+    case TOKEN_FOR:
+    case TOKEN_IF:
+    case TOKEN_WHILE:
+    case TOKEN_PRINT:
+    case TOKEN_RETURN:
+      return;
+    default: {
+      // Do nothing.
+    }
+    }
+
+    advance(parser, scanner);
+  }
 }
 
 static void binary(Parser *parser, Scanner *scanner) {
@@ -240,8 +327,21 @@ static void string(Parser *parser, Scanner *scanner) {
   Value value;
   value.type = VAL_STRING;
   value.as.chars = parser->previous->literal.c_str();
-  std::cout << "value " << value.as.chars << "\n";
   emitConstant(parser, value);
+}
+
+static void namedVariable(Parser *parser, Scanner *scanner, bool canAssign) {
+  uint8_t arg = identifierConstant(parser);
+  if (canAssign && match(parser, scanner, TOKEN_EQUAL)) {
+    expression(parser, scanner);
+    emitBytes(parser, OP_SET_GLOBAL, arg);
+  } else {
+    emitBytes(parser, OP_GET_GLOBAL, arg);
+  }
+}
+
+static void variable(Parser *parser, Scanner *scanner, bool canAssign) {
+  namedVariable(parser, scanner, canAssign);
 }
 
 static void literal(Parser *parser, Scanner *scanner) {
@@ -264,7 +364,8 @@ static void literal(Parser *parser, Scanner *scanner) {
   }
 }
 
-static void prefixRule(Parser *parser, Scanner *scanner, TokenType type) {
+static void prefixRule(Parser *parser, Scanner *scanner, TokenType type,
+                       bool canAssign) {
   switch (type) {
   case TOKEN_LEFT_PAREN: {
     grouping(parser, scanner);
@@ -298,12 +399,16 @@ static void prefixRule(Parser *parser, Scanner *scanner, TokenType type) {
     unary(parser, scanner);
     break;
   }
+  case TOKEN_IDENTIFIER: {
+    variable(parser, scanner, canAssign);
+  }
   default: {
     break;
   }
   }
 }
-static void infixRule(Parser *parser, Scanner *scanner, TokenType type) {
+static void infixRule(Parser *parser, Scanner *scanner, TokenType type,
+                      bool canAssign) {
   switch (type) {
   case TOKEN_MINUS: {
     binary(parser, scanner);
@@ -351,14 +456,37 @@ static void infixRule(Parser *parser, Scanner *scanner, TokenType type) {
   }
 }
 
+static void statement(Parser *parser, Scanner *scanner) {
+  if (match(parser, scanner, TOKEN_PRINT)) {
+    printStatement(parser, scanner);
+  } else {
+    expressionStatement(parser, scanner);
+  }
+}
+
+static void declaration(Parser *parser, Scanner *scanner) {
+  if (match(parser, scanner, TOKEN_VAR)) {
+    varDeclaration(parser, scanner);
+  } else {
+
+    statement(parser, scanner);
+  }
+
+  if (parser->panicMode) {
+    synchronize(parser, scanner);
+  }
+}
+
 bool compile(std::string source, Chunk *chunk) {
-  std::cout << "Compiling - " << source << "\n";
   Scanner *scanner = initScanner(source);
   Parser *parser = initParser(chunk);
 
   advance(parser, scanner);
-  expression(parser, scanner);
-  consume(parser, scanner, TOKEN_EOF, "Expect end of expression.");
+
+  while (!match(parser, scanner, TOKEN_EOF)) {
+    declaration(parser, scanner);
+  }
+
   endCompiler(parser);
 
   return !parser->hadError;

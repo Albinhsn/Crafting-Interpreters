@@ -76,7 +76,7 @@ static TokenType isKeyword(std::string literal) {
       {"struct", TOKEN_STRUCT}, {"else", TOKEN_ELSE}, {"false", TOKEN_FALSE},
       {"for", TOKEN_FOR},       {"if", TOKEN_IF},     {"nil", TOKEN_NIL},
       {"return", TOKEN_RETURN}, {"true", TOKEN_TRUE}, {"while", TOKEN_WHILE},
-  };
+      {"print", TOKEN_PRINT}, {"var", TOKEN_VAR}};
   if (m.count(literal)) {
     return m[literal];
   }
@@ -179,6 +179,9 @@ Token *scanToken(Scanner *scanner) {
   }
   case '}': {
     return makeToken(scanner, "}", TOKEN_RIGHT_BRACE);
+  }
+  case ';': {
+    return makeToken(scanner, ";", TOKEN_SEMICOLON);
   }
   case ',': {
     return makeToken(scanner, ",", TOKEN_COMMA);

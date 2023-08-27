@@ -1,8 +1,11 @@
 i:
 	echo "Idk not fixed yet"
 
-c:
+cr:
 	cd src/ && g++ -o main main.cpp chunk.cpp memory.cpp debug.cpp value.cpp vm.cpp compiler.cpp scanner.cpp object.cpp && ./main
+
+cf: 
+	cd src/ && g++ -o main main.cpp chunk.cpp memory.cpp debug.cpp value.cpp vm.cpp compiler.cpp scanner.cpp object.cpp && ./main ../$(file)
 
 bt:
 	cmake -S . -B build && cmake --build build

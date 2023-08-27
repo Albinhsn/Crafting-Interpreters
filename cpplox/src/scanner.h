@@ -48,6 +48,7 @@ typedef enum {
 
   // Keywords.
   TOKEN_STRUCT,
+  TOKEN_PRINT,
   TOKEN_ELSE,
   TOKEN_FALSE,
   TOKEN_FOR,

@@ -10,7 +10,7 @@ typedef struct {
   bool hadError;
   bool panicMode;
   Token *previous;
-  Chunk * chunk;
+  Chunk *chunk;
 } Parser;
 
 typedef enum {
@@ -27,13 +27,23 @@ typedef enum {
   PREC_PRIMARY
 } Precedence;
 
-typedef void (*ParseFn)(Parser * parser, Scanner * scanner);
+typedef void (*ParseFn)(Parser *parser, Scanner *scanner);
 
 typedef struct {
-  ParseFn* prefix;
-  ParseFn*infix;
+  ParseFn *prefix;
+  ParseFn *infix;
   Precedence precedence;
 } ParseRule;
+
+typedef struct {
+  Token name;
+  int depth;
+} Local;
+
+typedef struct {
+  std::vector<Local> locals;
+  int scopeDepth;
+} Compiler;
 
 bool compile(std::string source, Chunk *chunk);
 

@@ -104,6 +104,16 @@ InterpretResult run(VM *vm) {
       vm->stack->pop();
       break;
     }
+    case OP_GET_LOCAL: {
+      uint8_t slot = readByte(vm);
+      vm->stack->push(vm->stack->get(slot));
+      break;
+    }
+    case OP_SET_LOCAL: {
+      uint8_t slot = readByte(vm);
+      vm->stack->update(slot, peek(vm, 0));
+      break;
+    }
     case OP_GET_GLOBAL: {
       const char *name = AS_STRING(readConstant(vm));
       if (!vm->globals.count(name)) {

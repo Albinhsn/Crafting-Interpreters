@@ -21,6 +21,13 @@ public:
     }
     return curr->value;
   }
+  void update(int idx, Value value) {
+    Node *curr = head;
+    for (int i = 0; i < idx; i++) {
+      curr = curr->next;
+    }
+    curr->value = value;
+  }
   void init() {
     head = NULL;
     length = 0;

@@ -1,4 +1,6 @@
-var breakfast = 5;
-var beverage = 2;
-breakfast = breakfast + beverage;
-print breakfast;
+var b = 5;
+{
+  var a = 2;
+  print a;
+}
+print b;

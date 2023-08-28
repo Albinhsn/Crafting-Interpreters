@@ -7,6 +7,9 @@
 typedef enum {
   OP_CONSTANT,
   OP_PRINT,
+  OP_JUMP_IF_FALSE,
+  OP_JUMP,
+  OP_LOOP,
   OP_NIL,
   OP_TRUE,
   OP_FALSE,
@@ -32,7 +35,6 @@ typedef struct {
   std::vector<uint8_t> code;
   std::vector<int> lines;
   std::vector<Value> constants;
-  int count;
 } Chunk;
 
 void freeChunk(Chunk *chunk);

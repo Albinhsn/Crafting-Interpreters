@@ -58,6 +58,9 @@ static void concatenate(VM *vm) {
 }
 
 InterpretResult run(VM *vm) {
+#define READ_SHORT()                                                           \
+  (vm->ip += 2, (uint16_t)((vm->instructions[vm->ip - 2] << 8) |               \
+                           vm->instructions[vm->ip - 1]))
 #define BINARY_OP(valueType, op)                                               \
   do {                                                                         \
     if (!IS_NUMBER(peek(vm, 0)) || !IS_NUMBER(peek(vm, 1))) {                  \
@@ -110,7 +113,7 @@ InterpretResult run(VM *vm) {
       break;
     }
     case OP_SET_LOCAL: {
-      uint8_t slot = readByte(vm);
+      uint8_t slot = readByte(vm)+ 1;
       vm->stack->update(slot, peek(vm, 0));
       break;
     }
@@ -196,11 +199,30 @@ InterpretResult run(VM *vm) {
       std::cout << "\n";
       break;
     }
+    case OP_JUMP: {
+      uint16_t offset = READ_SHORT();
+      vm->ip += offset;
+      break;
+    }
+    case OP_JUMP_IF_FALSE: {
+      uint16_t offset = READ_SHORT();
+      if (isFalsey(peek(vm, 0))) {
+        vm->ip += offset;
+      }
+      break;
+    }
+    case OP_LOOP: {
+      uint16_t offset = READ_SHORT();
+      vm->ip -= offset;
+      break;
+    }
     case OP_RETURN: {
       return INTERPRET_OK;
     }
     }
   }
+#undef READ_SHORT
+#undef BINARY_OP
 }
 
 InterpretResult interpret(VM *vm, std::string source) {

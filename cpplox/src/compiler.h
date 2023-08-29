@@ -2,6 +2,7 @@
 #define cpplox_compiler_h
 
 #include "common.h"
+#include "object.h"
 #include "scanner.h"
 #include "vm.h"
 
@@ -10,7 +11,6 @@ typedef struct {
   bool hadError;
   bool panicMode;
   Token *previous;
-  Chunk *chunk;
 } Parser;
 
 typedef enum {
@@ -40,11 +40,16 @@ typedef struct {
   int depth;
 } Local;
 
-typedef struct {
+typedef enum { TYPE_FUNCTION, TYPE_SCRIPT } FunctionType;
+
+typedef struct Compiler {
+  struct Compiler *enclosing;
+  ObjFunction *function;
+  FunctionType type;
   std::vector<Local> locals;
   int scopeDepth;
 } Compiler;
 
-bool compile(std::string source, Chunk *chunk);
+ObjFunction *compile(std::string source, Chunk *chunk);
 
 #endif

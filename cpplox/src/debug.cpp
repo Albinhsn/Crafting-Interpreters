@@ -49,6 +49,9 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   uint8_t instruction = chunk->code[offset];
   std::cout << (int) instruction << "\n";
   switch (instruction) {
+  case OP_CALL:{
+      return byteInstruction("OP_CALL", chunk, offset);
+    }
   case OP_RETURN: {
     return simpleInstruction("OP_RETURN", offset);
   }

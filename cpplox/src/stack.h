@@ -14,7 +14,6 @@ class Stack {
 
 public:
   int length;
-
   void remove(int sp) {
     Node *curr = head;
     while (length > sp) {
@@ -52,9 +51,11 @@ public:
       throw std::invalid_argument("Can't pop with 0 length");
     }
     length--;
-    Node oldHead = *head;
+    Node *oldHead = head;
     head = head->next;
-    return oldHead.value;
+    Value value = oldHead->value;
+    delete (oldHead);
+    return value;
   }
   void push(Value value) {
     Node *node = new Node();

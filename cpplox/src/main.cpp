@@ -48,6 +48,7 @@ int main(int argc, const char *argv[]) {
     std::fprintf(stderr, "Usage: clox [path]\n");
     exit(64);
   }
-  freeVM();
+  freeVM(vm);
+  delete(vm);
   return 0;
 }

@@ -50,10 +50,6 @@ static Compiler *initCompiler(Compiler *current, Parser *parser,
     compiler->function->name->chars = parser->previous->literal;
   }
 
-  Local *local = new Local();
-  local->depth = 0;
-  local->name.type = TOKEN_NIL;
-  local->name.literal = "compiler";
   return compiler;
 }
 
@@ -87,6 +83,7 @@ static void errorAtCurrent(Parser *parser, std::string message) {
 }
 
 static void advance(Parser *parser, Scanner *scanner) {
+  delete (parser->previous);
   parser->previous = parser->current;
   for (;;) {
     parser->current = scanToken(scanner);
@@ -792,8 +789,10 @@ static void function(Compiler *current, Parser *parser, Scanner *scanner,
   consume(parser, scanner, TOKEN_LEFT_BRACE,
           "Expect '{' after function params.");
   block(compiler, parser, scanner);
+
   ObjFunction *function = endCompiler(compiler, parser);
   compiler = compiler->enclosing;
+
   emitBytes(compiler, parser, OP_CONSTANT,
             makeConstant(compiler, parser, OBJ_VAL(function)));
 }
@@ -851,5 +850,11 @@ ObjFunction *compile(std::string source, Chunk *chunk) {
   while (!match(parser, scanner, TOKEN_EOF)) {
     declaration(compiler, parser, scanner);
   }
-  return parser->hadError ? NULL : endCompiler(compiler, parser);
+  bool hadError = parser->hadError;
+  ObjFunction *function = new ObjFunction(*endCompiler(compiler, parser));
+
+  delete (scanner);
+  delete (parser);
+
+  return hadError ? NULL : function;
 }

@@ -31,7 +31,7 @@ typedef enum {
 } InterpretResult;
 
 VM *initVM();
-void freeVM();
+void freeVM(VM * vm);
 InterpretResult interpret(VM *vm, std::string source);
 
 #endif

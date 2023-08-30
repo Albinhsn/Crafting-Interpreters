@@ -13,9 +13,9 @@ void writeChunk(Chunk *chunk, uint8_t byte, int line) {
 }
 
 void freeChunk(Chunk *chunk) {
-  chunk->code.resize(0);
-  chunk->constants.resize(0);
-  chunk->lines.resize(0);
+  chunk->code.clear();
+  chunk->constants.clear();
+  chunk->lines.clear();
   initChunk(chunk);
 }
 

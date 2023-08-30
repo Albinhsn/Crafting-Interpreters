@@ -31,7 +31,10 @@ static CallFrame *currentFrame(VM *vm) {
   return vm->frames[vm->frames.size() - 1];
 }
 
-void freeVM() {}
+void freeVM(VM *vm) {
+  delete vm->stack;
+  vm->frames.clear();
+}
 
 static void resetStack(VM *vm) {
   delete (vm->stack);
@@ -89,7 +92,6 @@ static bool call(VM *vm, ObjFunction *function, int argCount) {
                  argCount);
     return false;
   }
-
   if (vm->frames.size() == FRAMES_MAX) {
     runtimeError(vm, "Stack overflow.");
     return false;
@@ -191,7 +193,8 @@ InterpretResult run(VM *vm) {
     }
     case OP_GET_LOCAL: {
       uint8_t slot = readByte(vm);
-      vm->stack->push(vm->stack->get((vm->stack->length  - 2 - frame->sp) - slot ));
+      vm->stack->push(
+          vm->stack->get((vm->stack->length - 2 - frame->sp) - slot));
       break;
     }
     case OP_SET_LOCAL: {
@@ -308,13 +311,15 @@ InterpretResult run(VM *vm) {
     }
     case OP_RETURN: {
       Value result = vm->stack->pop();
+      int sp = frame->sp;
+      delete (vm->frames.back());
       vm->frames.pop_back();
       if (vm->frames.size() == 0) {
         vm->stack->pop();
         return INTERPRET_OK;
       }
 
-      vm->stack->remove(frame->sp);
+      vm->stack->remove(sp);
       vm->stack->push(result);
       frame = vm->frames[vm->frames.size() - 1];
       break;
@@ -332,7 +337,6 @@ InterpretResult interpret(VM *vm, std::string source) {
   if (function == NULL) {
     return INTERPRET_COMPILE_ERROR;
   }
-
   vm->stack->push(OBJ_VAL(function));
   call(vm, function, 0);
   std::cout << "\n== Running in vm == \n";

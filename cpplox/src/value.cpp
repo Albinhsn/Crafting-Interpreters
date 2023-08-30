@@ -2,6 +2,7 @@
 #include "iostream"
 
 #include "memory.h"
+#include "object.h"
 #include "value.h"
 #include <cstdlib>
 #include <cstring>
@@ -28,9 +29,8 @@ bool valuesEqual(Value a, Value b) {
     return true;
   case VAL_NUMBER:
     return AS_NUMBER(a) == AS_NUMBER(b);
-  case VAL_STRING: {
-    return strcmp(AS_STRING(a), AS_STRING(b)) == 0;
-  }
+  case VAL_OBJ:
+    return AS_OBJ(a) == AS_OBJ(b);
   default:
     return false;
   }
@@ -50,12 +50,8 @@ void printValue(Value value) {
     std::cout << AS_NUMBER(value);
     break;
   }
-  case VAL_STRING: {
-    printf("%s", AS_STRING(value));
-    break;
-  }
   case VAL_OBJ: {
-    printf("%s", AS_STRING(value));
+    printObject(value);
     break;
   }
   }

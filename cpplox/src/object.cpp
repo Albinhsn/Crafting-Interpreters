@@ -5,6 +5,8 @@ ObjFunction *newFunction() {
   ObjFunction *function = new ObjFunction();
   function->arity = 0;
   function->name = NULL;
+  function->chunk = new Chunk();
+  function->obj.type = OBJ_FUNCTION;
   initChunk(function->chunk);
   return function;
 }
@@ -32,14 +34,22 @@ void printObject(Value value) {
     printFunction(AS_FUNCTION(value));
     break;
   }
+  case OBJ_STRING: {
+    std::cout << AS_STRING(value)->chars;
+    break;
+  }
+  default: {
+    std::cout << OBJ_TYPE(value) << " is unknown";
+  }
   }
 }
 
 ObjString *copyString(std::string str) {
   ObjString *objString = new ObjString();
 
-  Obj obj;
-  obj.type = OBJ_STRING;
+  Obj *obj = new Obj();
+  obj->type = OBJ_STRING;
+  objString->obj = *obj;
   objString->chars = str;
 
   return objString;

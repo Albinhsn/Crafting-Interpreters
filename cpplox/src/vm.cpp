@@ -12,7 +12,7 @@
 
 static void defineNative(VM *vm, std::string name, NativeFn function);
 
-static Value clockNative(int argCount, Value *args) {
+static Value clockNative(int argCount, Value args) {
   return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
@@ -46,10 +46,9 @@ static void runtimeError(VM *vm, std::string format, ...) {
   va_end(args);
   fputs("\n", stderr);
 
-  for (int i = vm->fp - 1; i >= 0; i--) {
+  for (int i = vm->frames.size() - 1; i >= 0; i--) {
     CallFrame *frame = vm->frames[i];
     ObjFunction *function = frame->function;
-    // THIS IS WRONG
     size_t instruction = frame->instructions[frame->ip];
     fprintf(stderr, "[line %d] in ", function->chunk->lines[instruction]);
 
@@ -67,8 +66,7 @@ static void defineNative(VM *vm, std::string name, NativeFn function) {
   vm->stack->push(OBJ_VAL(copyString(name)));
   vm->stack->push(OBJ_VAL(newNative(function)));
 
-  // THIS IS WRONG
-  vm->globals[AS_STRING(vm->stack->get(0))] = vm->stack->get(1);
+  vm->globals[AS_STRING(vm->stack->get(1))->chars] = vm->stack->get(0);
 
   vm->stack->pop();
   vm->stack->pop();
@@ -92,16 +90,16 @@ static bool call(VM *vm, ObjFunction *function, int argCount) {
     return false;
   }
 
-  if (vm->fp == FRAMES_MAX) {
+  if (vm->frames.size() == FRAMES_MAX) {
     runtimeError(vm, "Stack overflow.");
     return false;
   }
-  CallFrame *frame = vm->frames[vm->fp++];
+  CallFrame *frame = new CallFrame();
   frame->function = function;
   frame->instructions = function->chunk->code;
   frame->ip = 0;
-  // THIS WON*T WORK
-  frame->slots = vm->stack;
+  frame->sp = vm->stack->length - argCount - 1;
+  vm->frames.push_back(frame);
   return true;
 }
 
@@ -110,7 +108,8 @@ static bool callValue(VM *vm, Value callee, int argCount) {
     switch (OBJ_TYPE(callee)) {
     case OBJ_NATIVE: {
       NativeFn native = AS_NATIVE(callee);
-      Value result = native(argCount, vm->stack.length - argCount);
+      Value result =
+          native(argCount, vm->stack->get(vm->stack->length - argCount));
       vm->stack->length -= argCount + 1;
       vm->stack->push(result);
       return true;
@@ -122,6 +121,9 @@ static bool callValue(VM *vm, Value callee, int argCount) {
       break;
     }
   }
+  if (OBJ_TYPE(callee) == OBJ_STRING) {
+    std::cout << "Trying to call string " << AS_STRING(callee) << "\n";
+  }
   runtimeError(vm, "Can only call functions and classes.");
   return false;
 }
@@ -131,10 +133,10 @@ static bool isFalsey(Value value) {
 }
 
 static void concatenate(VM *vm) {
-  std::string a = AS_STRING(vm->stack->pop());
-  std::string b = AS_STRING(vm->stack->pop());
+  std::string a = AS_STRING(vm->stack->pop())->chars;
+  std::string b = AS_STRING(vm->stack->pop())->chars;
   std::string c = b.append(a);
-  Value value = STRING_VAL(c.c_str());
+  Value value = OBJ_VAL(copyString(c));
   vm->stack->push(value);
 }
 
@@ -155,17 +157,15 @@ InterpretResult run(VM *vm) {
   } while (false)
 
   for (;;) {
-
 #ifdef DEBUG_TRACE_EXECUTION
     std::cout << "        ";
-    for (int slot = 0; slot < vm->stack->length; slot++) {
+    for (int slot = vm->stack->length - 1; slot >= 0; slot--) {
       std::cout << "[ ";
       printValue(vm->stack->get(slot));
       std::cout << " ]";
     }
     std::cout << "\n";
-    disassembleInstruction(frame->function->chunk,
-                           (int)frame->function->chunk->code[frame->ip]);
+    disassembleInstruction(frame->function->chunk, (int)frame->ip);
 #endif
     switch (readByte(vm)) {
     case OP_CONSTANT: {
@@ -178,7 +178,6 @@ InterpretResult run(VM *vm) {
       break;
     }
     case OP_TRUE: {
-      std::cout << "Pushing true\n";
       vm->stack->push(BOOL_VAL(true));
       break;
     }
@@ -192,19 +191,18 @@ InterpretResult run(VM *vm) {
     }
     case OP_GET_LOCAL: {
       uint8_t slot = readByte(vm);
-      vm->stack->push(frame->slots->get(slot));
+      vm->stack->push(vm->stack->get(slot));
       break;
     }
     case OP_SET_LOCAL: {
       uint8_t slot = readByte(vm) + 1;
-      frame->slots->update(slot, peek(vm, 0));
+      vm->stack->update(slot, peek(vm, 0));
       break;
     }
     case OP_GET_GLOBAL: {
-      const char *name = AS_STRING(readConstant(vm));
+      std::string name = AS_STRING(readConstant(vm))->chars;
       if (!vm->globals.count(name)) {
-        std::string stdname = name;
-        runtimeError(vm, "Undefined variable '" + stdname + "'.");
+        runtimeError(vm, "Undefined variable '" + name + "'.");
         return INTERPRET_RUNTIME_ERROR;
       }
       Value value = vm->globals[name];
@@ -212,12 +210,13 @@ InterpretResult run(VM *vm) {
       break;
     }
     case OP_DEFINE_GLOBAL: {
-      vm->globals[AS_STRING(readConstant(vm))] = peek(vm, 0);
+      std::string s = AS_STRING(readConstant(vm))->chars;
+      vm->globals[s] = peek(vm, 0);
       vm->stack->pop();
       break;
     }
     case OP_SET_GLOBAL: {
-      const char *name = AS_STRING(readConstant(vm));
+      std::string name = AS_STRING(readConstant(vm))->chars;
       if (!vm->globals.count(name)) {
         std::string msg = name;
         runtimeError(vm, "Undefined variable '" + msg + "'.");
@@ -301,10 +300,10 @@ InterpretResult run(VM *vm) {
     }
     case OP_CALL: {
       int argCount = readByte(vm);
-      if (!callValue(vm, peek(vm, argCount), argCount)) {
+      if (!callValue(vm, peek(vm, -argCount), argCount)) {
         return INTERPRET_RUNTIME_ERROR;
       }
-      frame = vm->frames[vm->fp - 1];
+      frame = vm->frames[vm->frames.size() - 1];
       break;
     }
     case OP_RETURN: {
@@ -315,7 +314,7 @@ InterpretResult run(VM *vm) {
         return INTERPRET_OK;
       }
 
-      // vm->stackTop = frame->slots;
+      vm->stack->remove(frame->sp);
       vm->stack->push(result);
       frame = vm->frames[vm->frames.size() - 1];
       break;
@@ -334,16 +333,8 @@ InterpretResult interpret(VM *vm, std::string source) {
     return INTERPRET_COMPILE_ERROR;
   }
 
-  CallFrame *frame = new CallFrame();
-  vm->frames.push_back(frame);
-  frame->function = function;
-  frame->instructions = function->chunk->code;
-  frame->ip = 0;
-  frame->slots = vm->stack;
-
   vm->stack->push(OBJ_VAL(function));
   call(vm, function, 0);
-
-  std::cout << "\n== Running in vm == ";
+  std::cout << "\n== Running in vm == \n";
   return run(vm);
 }

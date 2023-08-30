@@ -18,7 +18,7 @@ typedef struct {
   ObjString *name;
 } ObjFunction;
 
-typedef Value (*NativeFn)(int argCount, Value *args);
+typedef Value (*NativeFn)(int argCount, Value args);
 
 typedef struct {
   Obj obj;
@@ -27,9 +27,11 @@ typedef struct {
 
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
+#define IS_STRING(value) isObjType(value, OBJ_STRING)
 
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 
+#define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 #define AS_NATIVE(value) (((ObjNative *)AS_OBJ(value))->function)
 #define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
 
@@ -38,6 +40,7 @@ struct ObjString {
   std::string chars;
 };
 
+void printObject(Value value);
 ObjFunction *newFunction();
 ObjNative *newNative(NativeFn function);
 ObjString *copyString(std::string str);

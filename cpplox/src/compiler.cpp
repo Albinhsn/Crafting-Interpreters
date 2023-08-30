@@ -46,14 +46,14 @@ static Compiler *initCompiler(Compiler *current, Parser *parser,
   compiler->type = type;
 
   if (type != TYPE_SCRIPT) {
-    current->function->name->chars = parser->previous->literal;
+    compiler->function->name = new ObjString();
+    compiler->function->name->chars = parser->previous->literal;
   }
 
   Local *local = new Local();
   local->depth = 0;
   local->name.type = TOKEN_NIL;
   local->name.literal = "compiler";
-
   return compiler;
 }
 
@@ -224,10 +224,8 @@ static void parsePrecedence(Compiler *compiler, Parser *parser,
 }
 
 static uint8_t identifierConstant(Compiler *compiler, Parser *parser) {
-  Value value;
-  value.type = VAL_OBJ;
-  value.as.chars = parser->previous->literal.c_str();
-  return makeConstant(compiler, parser, value);
+  return makeConstant(compiler, parser,
+                      OBJ_VAL(copyString(parser->previous->literal)));
 }
 
 static void addLocal(Compiler *compiler, Token name) {
@@ -464,7 +462,7 @@ static void printStatement(Compiler *compiler, Parser *parser,
 
 static void returnStatement(Compiler *compiler, Parser *parser,
                             Scanner *scanner) {
-  if(compiler->type == TYPE_SCRIPT){
+  if (compiler->type == TYPE_SCRIPT) {
     error(parser, "Can't return from top-level code");
   }
 
@@ -612,10 +610,8 @@ static void number(Compiler *compiler, Parser *parser, Scanner *scanner) {
 }
 
 static void string(Compiler *compiler, Parser *parser, Scanner *scanner) {
-  Value value;
-  value.type = VAL_STRING;
-  value.as.chars = parser->previous->literal.c_str();
-  emitConstant(compiler, parser, value);
+  emitConstant(compiler, parser,
+               OBJ_VAL(copyString(parser->previous->literal)));
 }
 
 static void namedVariable(Compiler *compiler, Parser *parser, Scanner *scanner,
@@ -713,6 +709,7 @@ static void infixRule(Compiler *compiler, Parser *parser, Scanner *scanner,
   switch (type) {
   case TOKEN_LEFT_PAREN: {
     call(compiler, parser, scanner);
+    break;
   }
   case TOKEN_MINUS: {
     binary(compiler, parser, scanner);
@@ -778,7 +775,6 @@ static void function(Compiler *current, Parser *parser, Scanner *scanner,
                      FunctionType type) {
   Compiler *compiler = initCompiler(current, parser, type);
   beginScope(compiler);
-
   consume(parser, scanner, TOKEN_LEFT_PAREN, "Expect '(' after function name.");
   if (!check(parser, TOKEN_RIGHT_PAREN)) {
     do {
@@ -791,11 +787,13 @@ static void function(Compiler *current, Parser *parser, Scanner *scanner,
       defineVariable(compiler, parser, constant);
     } while (match(parser, scanner, TOKEN_COMMA));
   }
-
-  consume(parser, scanner, TOKEN_LEFT_BRACE, "Expect ')' after function name.");
+  consume(parser, scanner, TOKEN_RIGHT_PAREN,
+          "Expect ')' after last function param.");
+  consume(parser, scanner, TOKEN_LEFT_BRACE,
+          "Expect '{' after function params.");
   block(compiler, parser, scanner);
-
   ObjFunction *function = endCompiler(compiler, parser);
+  compiler = compiler->enclosing;
   emitBytes(compiler, parser, OP_CONSTANT,
             makeConstant(compiler, parser, OBJ_VAL(function)));
 }
@@ -850,7 +848,6 @@ ObjFunction *compile(std::string source, Chunk *chunk) {
   Compiler *compiler = initCompiler(NULL, parser, TYPE_SCRIPT);
 
   advance(parser, scanner);
-
   while (!match(parser, scanner, TOKEN_EOF)) {
     declaration(compiler, parser, scanner);
   }

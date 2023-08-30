@@ -14,12 +14,11 @@ typedef struct {
   ObjFunction *function;
   std::vector<uint8_t> instructions;
   int ip;
-  Stack *slots;
+  int sp; // Stack pointer
 } CallFrame;
 
 typedef struct {
   std::vector<CallFrame *> frames;
-  int fp;
   std::map<std::string, Value> strings;
   std::map<std::string, Value> globals;
   Stack *stack;

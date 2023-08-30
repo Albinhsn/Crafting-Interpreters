@@ -14,6 +14,14 @@ class Stack {
 
 public:
   int length;
+
+  void remove(int sp) {
+    Node *curr = head;
+    while (length > sp) {
+      pop();
+    }
+  }
+
   Value get(int idx) {
     Node *curr = head;
     for (int i = 0; i < idx; i++) {

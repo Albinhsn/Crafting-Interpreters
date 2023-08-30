@@ -191,12 +191,12 @@ InterpretResult run(VM *vm) {
     }
     case OP_GET_LOCAL: {
       uint8_t slot = readByte(vm);
-      vm->stack->push(vm->stack->get(slot));
+      vm->stack->push(vm->stack->get((vm->stack->length  - 2 - frame->sp) - slot ));
       break;
     }
     case OP_SET_LOCAL: {
-      uint8_t slot = readByte(vm) + 1;
-      vm->stack->update(slot, peek(vm, 0));
+      uint8_t slot = readByte(vm);
+      vm->stack->update(frame->sp + slot, peek(vm, 0));
       break;
     }
     case OP_GET_GLOBAL: {
@@ -300,7 +300,7 @@ InterpretResult run(VM *vm) {
     }
     case OP_CALL: {
       int argCount = readByte(vm);
-      if (!callValue(vm, peek(vm, -argCount), argCount)) {
+      if (!callValue(vm, peek(vm, argCount), argCount)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       frame = vm->frames[vm->frames.size() - 1];

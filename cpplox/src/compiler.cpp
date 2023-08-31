@@ -791,7 +791,7 @@ static void function(Compiler *current, Parser *parser, Scanner *scanner,
   block(compiler, parser, scanner);
 
   ObjFunction *function = endCompiler(compiler, parser);
-
+  delete(compiler);
   emitBytes(current, parser, OP_CONSTANT,
             makeConstant(current, parser, OBJ_VAL(function)));
 }
@@ -850,8 +850,15 @@ Compiler *compile(std::string source) {
     declaration(compiler, parser, scanner);
   }
   bool hadError = parser->hadError;
-  ObjFunction *function = new ObjFunction(*endCompiler(compiler, parser));
+  endCompiler(compiler, parser);
 
+  if (parser->current) {
+
+    delete (parser->current);
+  }
+  if (parser->previous) {
+    delete (parser->previous);
+  }
   delete (scanner);
   delete (parser);
 

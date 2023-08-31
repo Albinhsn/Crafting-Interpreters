@@ -791,10 +791,9 @@ static void function(Compiler *current, Parser *parser, Scanner *scanner,
   block(compiler, parser, scanner);
 
   ObjFunction *function = endCompiler(compiler, parser);
-  compiler = compiler->enclosing;
 
-  emitBytes(compiler, parser, OP_CONSTANT,
-            makeConstant(compiler, parser, OBJ_VAL(function)));
+  emitBytes(current, parser, OP_CONSTANT,
+            makeConstant(current, parser, OBJ_VAL(function)));
 }
 
 static void funDeclaration(Compiler *compiler, Parser *parser,
@@ -841,7 +840,7 @@ static void declaration(Compiler *compiler, Parser *parser, Scanner *scanner) {
   }
 }
 
-ObjFunction *compile(std::string source, Chunk *chunk) {
+Compiler *compile(std::string source) {
   Scanner *scanner = initScanner(source);
   Parser *parser = initParser();
   Compiler *compiler = initCompiler(NULL, parser, TYPE_SCRIPT);
@@ -856,5 +855,5 @@ ObjFunction *compile(std::string source, Chunk *chunk) {
   delete (scanner);
   delete (parser);
 
-  return hadError ? NULL : function;
+  return hadError ? NULL : compiler;
 }

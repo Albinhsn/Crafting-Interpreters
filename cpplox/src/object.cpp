@@ -1,5 +1,6 @@
 
 #include "object.h"
+#include "vm.h"
 
 ObjFunction *newFunction() {
   ObjFunction *function = new ObjFunction();
@@ -8,6 +9,8 @@ ObjFunction *newFunction() {
   function->chunk = new Chunk();
   function->obj.type = OBJ_FUNCTION;
   initChunk(function->chunk);
+
+  vm->objects.push_back((Obj *)function);
   return function;
 }
 static void printFunction(ObjFunction *function) {
@@ -21,6 +24,9 @@ static void printFunction(ObjFunction *function) {
 ObjNative *newNative(NativeFn function) {
   ObjNative *native = new ObjNative();
   native->function = function;
+
+  vm->objects.push_back((Obj *)function);
+
   return native;
 }
 
@@ -51,6 +57,9 @@ ObjString *copyString(std::string str) {
   obj->type = OBJ_STRING;
   objString->obj = *obj;
   objString->chars = str;
+
+  vm->objects.push_back((Obj *)objString);
+  vm->objects.push_back((Obj *)obj);
 
   return objString;
 }

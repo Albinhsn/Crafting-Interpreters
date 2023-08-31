@@ -10,6 +10,7 @@
 
 #define FRAMES_MAX 90
 
+
 typedef struct {
   ObjFunction *function;
   std::vector<uint8_t> instructions;
@@ -21,8 +22,11 @@ typedef struct {
   std::vector<CallFrame *> frames;
   std::map<std::string, Value> strings;
   std::map<std::string, Value> globals;
+  std::vector<Obj *> objects;
   Stack *stack;
 } VM;
+
+extern VM *vm;
 
 typedef enum {
   INTERPRET_OK,
@@ -30,8 +34,8 @@ typedef enum {
   INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
-VM *initVM();
-void freeVM(VM * vm);
-InterpretResult interpret(VM *vm, std::string source);
+void initVM();
+void freeVM();
+InterpretResult interpret(std::string source);
 
 #endif

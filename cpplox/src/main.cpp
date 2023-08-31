@@ -1,5 +1,6 @@
 #include "chunk.h"
 #include "common.h"
+#include "coz.h"
 #include "debug.h"
 #include "vm.h"
 #include <cstdio>
@@ -14,17 +15,18 @@ static std::string readFile(std::string path) {
   return buffer.str();
 }
 
-static void runFile(VM *vm, std::string path) {
+static void runFile(std::string path) {
   std::string source = readFile(path);
-  InterpretResult result = interpret(vm, source);
+  InterpretResult result = interpret(source);
 
+  freeVM();
   if (result == INTERPRET_COMPILE_ERROR)
     exit(65);
   if (result == INTERPRET_RUNTIME_ERROR)
     exit(70);
 }
 
-static void repl(VM *vm) {
+static void repl() {
   std::string input;
   for (;;) {
     std::cout << "> ";
@@ -34,21 +36,19 @@ static void repl(VM *vm) {
       break;
     }
 
-    interpret(vm, input);
+    interpret(input);
   }
+  freeVM();
 }
 
 int main(int argc, const char *argv[]) {
-  VM *vm = initVM();
   if (argc == 1) {
-    repl(vm);
+    repl();
   } else if (argc == 2) {
-    runFile(vm, argv[1]);
+    runFile(argv[1]);
   } else {
     std::fprintf(stderr, "Usage: clox [path]\n");
     exit(64);
   }
-  freeVM(vm);
-  delete(vm);
   return 0;
 }

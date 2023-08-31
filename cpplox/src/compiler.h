@@ -50,6 +50,6 @@ typedef struct Compiler {
   int scopeDepth;
 } Compiler;
 
-ObjFunction *compile(std::string source, Chunk *chunk);
+Compiler * compile(std::string source);
 
 #endif

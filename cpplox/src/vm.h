@@ -10,7 +10,6 @@
 
 #define FRAMES_MAX 90
 
-
 typedef struct {
   ObjFunction *function;
   std::vector<uint8_t> instructions;

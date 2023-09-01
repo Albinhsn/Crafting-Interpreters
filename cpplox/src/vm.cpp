@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "object.h"
 #include "value.h"
+#include <algorithm>
 #include <cstdarg>
 #include <cstring>
 #include <map>
@@ -85,6 +86,15 @@ static uint8_t readByte() {
   return frame->instructions[frame->ip++];
 }
 
+static bool matchByte(OpCode code) {
+  CallFrame *frame = currentFrame();
+  if (frame->instructions[frame->ip] == code) {
+    frame->ip++;
+    return true;
+  }
+  return false;
+}
+
 static Value readConstant() {
   return currentFrame()->function->chunk->constants[readByte()];
 }
@@ -126,8 +136,16 @@ static bool callValue(Value callee, int argCount) {
     }
     case OBJ_STRUCT: {
       ObjStruct *strukt = AS_STRUCT(callee);
-      vm->stack->update(argCount, OBJ_VAL(newInstance(strukt)));
-      std::cout << vm->stack->length << "\n";
+      if (strukt->fields.size() != argCount) {
+        runtimeError(vm, "Expected %d argument for struct but got %d",
+                     strukt->fields.size(), argCount);
+        return false;
+      }
+      std::vector<Value> fields;
+      for (int i = 0; i < argCount; ++i) {
+        fields.push_back(vm->stack->pop());
+      }
+      vm->stack->update(0, OBJ_VAL(newInstance(strukt, fields)));
       return true;
     }
     default:
@@ -242,15 +260,24 @@ InterpretResult run() {
         runtimeError(vm, "Only instances have properties.");
         return INTERPRET_RUNTIME_ERROR;
       }
-
+      // Get the instance from the top
       ObjInstance *instance = AS_INSTANCE(peek(0));
-      std::string name = READ_STRING()->chars;
-
-      if (instance->fields.count(name) == 0) {
-        runtimeError(vm, "Undefined property '" + name + "'.");
+      std::string fieldName = AS_STRING(readConstant())->chars;
+      std::vector<std::string> struktFields = instance->strukt->fields;
+      int idx = -1;
+      for (int i = 0; i < struktFields.size(); ++i) {
+        if (struktFields[i] == fieldName) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx == -1) {
+        runtimeError(vm, "Couldn't find field?");
         return INTERPRET_RUNTIME_ERROR;
       }
-      vm->stack->update(0, instance->fields[name]);
+
+      // Update aka remove the instance and replace it with the field
+      vm->stack->update(0, instance->fields[idx]);
       break;
     }
     case OP_SET_PROPERTY: {
@@ -261,7 +288,7 @@ InterpretResult run() {
       }
 
       ObjInstance *instance = AS_INSTANCE(peek(1));
-      instance->fields[READ_STRING()->chars] = peek(0);
+      instance->fields[(int)readByte()] = peek(0);
 
       Value value = vm->stack->pop();
       vm->stack->update(0, value);
@@ -349,7 +376,21 @@ InterpretResult run() {
       break;
     }
     case OP_STRUCT: {
-      vm->stack->push(OBJ_VAL(newStruct(AS_STRING(readConstant()))));
+      ObjString *name = AS_STRING(readConstant());
+
+      // This should be handled in the compiler?
+      if (vm->globals.count(name->chars)) {
+        runtimeError(vm, "Can't redeclare a struct '" + name->chars + "'.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjStruct *strukt = newStruct(name);
+      Value value;
+      while (matchByte(OP_STRUCT_ARG)) {
+        strukt->fields.push_back(AS_STRING(readConstant())->chars);
+      }
+      std::reverse(strukt->fields.begin(), strukt->fields.end());
+
+      vm->globals[name->chars] = OBJ_VAL(strukt);
       break;
     }
     case OP_RETURN: {

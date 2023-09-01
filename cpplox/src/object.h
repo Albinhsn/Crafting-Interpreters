@@ -35,12 +35,14 @@ typedef struct {
 typedef struct {
   Obj obj;
   ObjString *name;
+  std::vector<std::string> fields;
 } ObjStruct;
 
 typedef struct {
   Obj obj;
+  ObjString *name;
   ObjStruct *strukt;
-  std::map<std::string, Value> fields;
+  std::vector<Value> fields;
 } ObjInstance;
 
 #define IS_STRUCT(value) isObjType(value, OBJ_STRUCT)
@@ -67,7 +69,7 @@ ObjFunction *newFunction();
 ObjNative *newNative(NativeFn function);
 ObjString *copyString(std::string str);
 ObjStruct *newStruct(ObjString *name);
-ObjInstance *newInstance(ObjStruct *strukt);
+ObjInstance *newInstance(ObjStruct *strukt, std::vector<Value> fields);
 static inline bool isObjType(Value value, ObjType type) {
   return IS_OBJ(value) && AS_OBJ(value)->type == type;
 }

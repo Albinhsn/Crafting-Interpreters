@@ -8,6 +8,7 @@ typedef enum {
   OP_CONSTANT,
   OP_PRINT,
   OP_STRUCT,
+  OP_STRUCT_ARG,
   OP_JUMP_IF_FALSE,
   OP_JUMP,
   OP_LOOP,

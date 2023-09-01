@@ -39,6 +39,13 @@ static int constantInstruction(std::string name, Chunk *chunk, int offset) {
   return offset + 2;
 }
 
+static int structArgInstruction(std::string name, Chunk *chunk, int offset) {
+  uint8_t constant = chunk->code[offset + 1];
+  std::cout << name << " " << (int)constant << " '";
+  std::cout << "'\n";
+  return offset + 2;
+}
+
 int disassembleInstruction(Chunk *chunk, int offset) {
   std::cout << offset << " ";
   if (offset > 0 && chunk->lines[offset] == chunk->lines[offset - 1]) {
@@ -54,6 +61,9 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   }
   case OP_RETURN: {
     return simpleInstruction("OP_RETURN", offset);
+  }
+  case OP_STRUCT_ARG: {
+    return constantInstruction("OP_STRUCT_ARG", chunk, offset);
   }
   case OP_STRUCT: {
     return constantInstruction("OP_STRUCT", chunk, offset);

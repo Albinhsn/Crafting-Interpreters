@@ -54,5 +54,8 @@ void printValue(Value value) {
     printObject(value);
     break;
   }
+  default:{
+      std::cout << "undefined value"; 
+    }
   }
 }

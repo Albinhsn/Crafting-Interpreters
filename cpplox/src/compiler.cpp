@@ -816,6 +816,20 @@ static void function(Compiler *current, Parser *parser, Scanner *scanner,
             makeConstant(current, parser, OBJ_VAL(function)));
 }
 
+static void structArgs(Compiler *compiler, Parser *parser, Scanner *scanner) {
+  while (!check(parser, TOKEN_RIGHT_BRACE)) {
+    consume(parser, scanner, TOKEN_IDENTIFIER,
+            "Expect field identifier in struct");
+
+    emitByte(compiler, parser, OP_STRUCT_ARG);
+    uint8_t arg = identifierConstant(compiler, parser);
+    emitByte(compiler, parser, (uint8_t)arg);
+
+    consume(parser, scanner, TOKEN_SEMICOLON,
+            "Expect semicolon after struct field identifier");
+  }
+}
+
 static void structDeclaration(Compiler *compiler, Parser *parser,
                               Scanner *scanner) {
   consume(parser, scanner, TOKEN_IDENTIFIER, "Expect struct name");
@@ -823,9 +837,10 @@ static void structDeclaration(Compiler *compiler, Parser *parser,
   declareVariable(compiler, parser);
 
   emitBytes(compiler, parser, OP_STRUCT, nameConstant);
-  defineVariable(compiler, parser, nameConstant);
+  // defineVariable(compiler, parser, nameConstant);
 
   consume(parser, scanner, TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+  structArgs(compiler, parser, scanner);
   consume(parser, scanner, TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
 }
 

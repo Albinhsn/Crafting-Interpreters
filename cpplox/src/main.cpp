@@ -10,6 +10,10 @@
 static std::string readFile(std::string path) {
   std::ifstream t(path);
   std::stringstream buffer;
+  if(t.fail()){
+    std::cout << "file doesn't exist\n";
+    exit(1);
+  }
   buffer << t.rdbuf();
   t.close();
   return buffer.str();

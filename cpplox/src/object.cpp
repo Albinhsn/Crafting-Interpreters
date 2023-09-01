@@ -16,18 +16,20 @@ ObjFunction *newFunction() {
 
 ObjStruct *newStruct(ObjString *name) {
   ObjStruct *strukt = new ObjStruct();
-  strukt->name = name;
   strukt->obj.type = OBJ_STRUCT;
+  strukt->fields = std::vector<std::string>();
+  strukt->name = name;
 
   vm->objects.push_back((Obj *)strukt);
   return strukt;
 }
 
-ObjInstance *newInstance(ObjStruct *strukt) {
+ObjInstance *newInstance(ObjStruct *strukt, std::vector<Value> fields) {
   ObjInstance *instance = new ObjInstance();
+  instance->name = strukt->name;
+  instance->fields = fields;
   instance->strukt = strukt;
-  instance->fields = std::map<std::string, Value>();
-  instance->obj.type= OBJ_INSTANCE;
+  instance->obj.type = OBJ_INSTANCE;
 
   vm->objects.push_back((Obj *)instance);
   return instance;
@@ -69,7 +71,7 @@ void printObject(Value value) {
     break;
   }
   case OBJ_INSTANCE: {
-    std::cout << AS_INSTANCE(value)->strukt->name->chars << " instance";
+    std::cout << AS_INSTANCE(value)->name->chars << " instance";
     break;
   }
   default: {

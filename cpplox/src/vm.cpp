@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "memory.h"
 #include "object.h"
+#include "stack.h"
 #include "value.h"
 #include <algorithm>
 #include <cstdarg>
@@ -32,14 +33,11 @@ void initVM() {
 }
 static CallFrame *currentFrame() { return vm->frames[vm->frames.size() - 1]; }
 
-void freeVM() {
-  delete vm->stack;
-  vm->frames.clear();
-}
+void freeVM() { vm->frames.clear(); }
 
 static void resetStack(VM *vm) {
-  delete (vm->stack);
   vm->stack = new Stack();
+  vm->stack->init();
   vm->frames = std::vector<CallFrame *>();
 }
 
@@ -373,6 +371,16 @@ InterpretResult run() {
         return INTERPRET_RUNTIME_ERROR;
       }
       frame = vm->frames[vm->frames.size() - 1];
+      break;
+    }
+    case OP_ARRAY: {
+      int argCount = readByte();
+      std::vector<Value> values = std::vector<Value>();
+      for (int i = 0; i < argCount; i++) {
+        values.push_back(vm->stack->pop());
+      }
+      ObjArray *array = newArray(values);
+      vm->stack->push(OBJ_VAL(array));
       break;
     }
     case OP_STRUCT: {

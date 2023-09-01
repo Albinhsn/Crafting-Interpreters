@@ -7,17 +7,6 @@
 #include <cstdlib>
 #include <cstring>
 
-void initValueArray(ValueArray *array) { array = new std::vector<Value>(); }
-
-void writeValueArray(ValueArray *array, Value value) {
-  array->push_back(value);
-}
-
-void freeValueArray(ValueArray *array) {
-  array->resize(0);
-  initValueArray(array);
-}
-
 bool valuesEqual(Value a, Value b) {
   if (a.type != b.type)
     return false;

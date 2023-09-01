@@ -352,13 +352,33 @@ static void or_(Compiler *compiler, Parser *parser, Scanner *scanner,
   patchJump(compiler, parser, endJump);
 }
 
+static void arrayDeclaration(Compiler *compiler, Parser *parser,
+                             Scanner *scanner) {
+  uint8_t items = 0;
+  if (!check(parser, TOKEN_RIGHT_BRACKET)) {
+    do {
+      expression(compiler, parser, scanner);
+      if (items == 255) {
+        error(parser, "Can't have more than 255 arguments.");
+      }
+      items++;
+    } while (match(parser, scanner, TOKEN_COMMA));
+  }
+  consume(parser, scanner, TOKEN_RIGHT_BRACKET, "Expect ')' after arguments.");
+  emitBytes(compiler, parser, OP_ARRAY, items);
+}
+
 static void varDeclaration(Compiler *compiler, Parser *parser,
                            Scanner *scanner) {
   uint8_t global =
       parseVariable(compiler, parser, scanner, "Expect variable name.");
 
   if (match(parser, scanner, TOKEN_EQUAL)) {
-    expression(compiler, parser, scanner);
+    if (match(parser, scanner, TOKEN_LEFT_BRACKET)) {
+      arrayDeclaration(compiler, parser, scanner);
+    } else {
+      expression(compiler, parser, scanner);
+    }
   } else {
     emitByte(compiler, parser, OP_NIL);
   }
@@ -881,7 +901,6 @@ static void declaration(Compiler *compiler, Parser *parser, Scanner *scanner) {
   } else if (match(parser, scanner, TOKEN_STRUCT)) {
     structDeclaration(compiler, parser, scanner);
   } else {
-
     statement(compiler, parser, scanner);
   }
 

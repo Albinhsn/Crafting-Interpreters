@@ -11,7 +11,8 @@ typedef enum {
   OBJ_STRUCT,
   OBJ_STRING,
   OBJ_FUNCTION,
-  OBJ_NATIVE
+  OBJ_NATIVE,
+  OBJ_ARRAY
 } ObjType;
 
 struct Obj {
@@ -40,12 +41,18 @@ typedef struct {
 
 typedef struct {
   Obj obj;
+  std::vector<Value> values;
+} ObjArray;
+
+typedef struct {
+  Obj obj;
   ObjString *name;
   ObjStruct *strukt;
   std::vector<Value> fields;
 } ObjInstance;
 
 #define IS_STRUCT(value) isObjType(value, OBJ_STRUCT)
+#define IS_ARRAY(value) isObjType(value, OBJ_ARRAY)
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
 #define IS_INSTANCE(value) isObjType(value, OBJ_INSTANCE)
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
@@ -53,6 +60,7 @@ typedef struct {
 
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 
+#define AS_ARRAY(value) ((ObjArray *)AS_OBJ(value))
 #define AS_STRUCT(value) ((ObjStruct *)AS_OBJ(value))
 #define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
 #define AS_INSTANCE(value) ((ObjInstance *)AS_OBJ(value))
@@ -66,6 +74,7 @@ struct ObjString {
 
 void printObject(Value value);
 ObjFunction *newFunction();
+ObjArray * newArray(std::vector<Value>);
 ObjNative *newNative(NativeFn function);
 ObjString *copyString(std::string str);
 ObjStruct *newStruct(ObjString *name);

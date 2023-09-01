@@ -22,7 +22,7 @@ typedef struct {
   std::map<std::string, Value> strings;
   std::map<std::string, Value> globals;
   std::vector<Obj *> objects;
-  Stack *stack;
+  Stack * stack;
 } VM;
 
 extern VM *vm;

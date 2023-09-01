@@ -1,5 +1,6 @@
 
 #include "object.h"
+#include "value.h"
 #include "vm.h"
 
 ObjFunction *newFunction() {
@@ -12,6 +13,17 @@ ObjFunction *newFunction() {
 
   vm->objects.push_back((Obj *)function);
   return function;
+}
+
+ObjArray *newArray(std::vector<Value> values) {
+  ObjArray *array = new ObjArray();
+  array->values = values;
+
+  Obj obj;
+  obj.type = OBJ_ARRAY;
+  array->obj = obj;
+
+  return array;
 }
 
 ObjStruct *newStruct(ObjString *name) {
@@ -74,6 +86,16 @@ void printObject(Value value) {
     std::cout << AS_INSTANCE(value)->name->chars << " instance";
     break;
   }
+  case OBJ_ARRAY:{
+      ObjArray * array = AS_ARRAY(value);
+      std::cout << "[";
+      for(int i = 0; i < array->values.size(); i++){
+        printValue(array->values[i]);
+        std::cout << (i < array->values.size() - 1 ? "," : "");
+      }
+      std::cout << "]";
+      break;
+    }
   default: {
     std::cout << OBJ_TYPE(value) << " is unknown";
   }

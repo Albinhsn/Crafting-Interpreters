@@ -31,7 +31,6 @@ void initVM() {
 }
 static CallFrame *currentFrame() { return vm->frames[vm->frames.size() - 1]; }
 
-
 void freeVM() {
   delete vm->stack;
   vm->frames.clear();
@@ -125,12 +124,16 @@ static bool callValue(Value callee, int argCount) {
     case OBJ_FUNCTION: {
       return call(AS_FUNCTION(callee), argCount);
     }
+    case OBJ_STRUCT: {
+      ObjStruct *strukt = AS_STRUCT(callee);
+      vm->stack->update(argCount,
+                        OBJ_VAL(newInstance(strukt)));
+      std::cout << vm->stack->length << "\n";
+      return true;
+    }
     default:
       break;
     }
-  }
-  if (OBJ_TYPE(callee) == OBJ_STRING) {
-    std::cout << "Trying to call string " << AS_STRING(callee) << "\n";
   }
   runtimeError(vm, "Can only call functions and classes.");
   return false;
@@ -153,6 +156,7 @@ InterpretResult run() {
 #define READ_SHORT()                                                           \
   (frame->ip += 2, (uint16_t)((frame->instructions[frame->ip - 2] << 8) |      \
                               frame->instructions[frame->ip - 1]))
+#define READ_STRING() AS_STRING(readConstant())
 #define BINARY_OP(valueType, op)                                               \
   do {                                                                         \
     if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                          \
@@ -209,7 +213,7 @@ InterpretResult run() {
       break;
     }
     case OP_GET_GLOBAL: {
-      std::string name = AS_STRING(readConstant())->chars;
+      std::string name = READ_STRING()->chars;
       if (!vm->globals.count(name)) {
         runtimeError(vm, "Undefined variable '" + name + "'.");
         return INTERPRET_RUNTIME_ERROR;
@@ -219,19 +223,49 @@ InterpretResult run() {
       break;
     }
     case OP_DEFINE_GLOBAL: {
-      std::string s = AS_STRING(readConstant())->chars;
+      std::string s = READ_STRING()->chars;
       vm->globals[s] = peek(0);
       vm->stack->pop();
       break;
     }
     case OP_SET_GLOBAL: {
-      std::string name = AS_STRING(readConstant())->chars;
+      std::string name = READ_STRING()->chars;
       if (!vm->globals.count(name)) {
         std::string msg = name;
         runtimeError(vm, "Undefined variable '" + msg + "'.");
         return INTERPRET_RUNTIME_ERROR;
       }
       vm->globals[name] = peek(0);
+      break;
+    }
+    case OP_GET_PROPERTY: {
+      if (!IS_INSTANCE(peek(0))) {
+        runtimeError(vm, "Only instances have properties.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+
+      ObjInstance *instance = AS_INSTANCE(peek(0));
+      std::string name = READ_STRING()->chars;
+
+      if (instance->fields.count(name) == 0) {
+        runtimeError(vm, "Undefined property '" + name + "'.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      vm->stack->update(0, instance->fields[name]);
+      break;
+    }
+    case OP_SET_PROPERTY: {
+      if (!IS_INSTANCE(peek(1))) {
+        std::cout << OBJ_TYPE(peek(1)) << "\n"; 
+        runtimeError(vm, "Only instances have fields.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+
+      ObjInstance *instance = AS_INSTANCE(peek(1));
+      instance->fields[READ_STRING()->chars] = peek(0);
+
+      Value value = vm->stack->pop();
+      vm->stack->update(0, value);
       break;
     }
     case OP_EQUAL: {
@@ -315,6 +349,10 @@ InterpretResult run() {
       frame = vm->frames[vm->frames.size() - 1];
       break;
     }
+    case OP_STRUCT: {
+      vm->stack->push(OBJ_VAL(newStruct(AS_STRING(readConstant()))));
+      break;
+    }
     case OP_RETURN: {
       Value result = vm->stack->pop();
       int sp = freeFrame(vm);
@@ -330,6 +368,7 @@ InterpretResult run() {
     }
     }
   }
+#undef READ_STRING
 #undef READ_SHORT
 #undef BINARY_OP
 }

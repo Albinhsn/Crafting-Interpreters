@@ -2,8 +2,8 @@
 
 #include "compiler.h"
 #include "chunk.h"
-#include "memory.h"
 #include "common.h"
+#include "memory.h"
 #include "object.h"
 #include "scanner.h"
 #include <cstdint>
@@ -176,6 +176,8 @@ static ObjFunction *endCompiler(Compiler *compiler, Parser *parser) {
 
 static Precedence getPrecedence(TokenType type) {
   switch (type) {
+  case TOKEN_DOT:
+    return PREC_CALL;
   case TOKEN_LEFT_PAREN:
     return PREC_CALL;
   case TOKEN_MINUS:
@@ -573,6 +575,19 @@ static void call(Compiler *compiler, Parser *parser, Scanner *scanner) {
   emitBytes(compiler, parser, OP_CALL, argCount);
 }
 
+static void dot(Compiler *compiler, Parser *parser, Scanner *scanner,
+                bool canAssign) {
+  consume(parser, scanner, TOKEN_IDENTIFIER, "Expect property name after '.'.");
+  uint8_t name = identifierConstant(compiler, parser);
+
+  if (canAssign && match(parser, scanner, TOKEN_EQUAL)) {
+    expression(compiler, parser, scanner);
+    emitBytes(compiler, parser, OP_SET_PROPERTY, name);
+  } else {
+    emitBytes(compiler, parser, OP_GET_PROPERTY, name);
+  }
+}
+
 static void grouping(Compiler *compiler, Parser *parser, Scanner *scanner) {
   expression(compiler, parser, scanner);
   consume(parser, scanner, TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
@@ -709,6 +724,10 @@ static void infixRule(Compiler *compiler, Parser *parser, Scanner *scanner,
     call(compiler, parser, scanner);
     break;
   }
+  case TOKEN_DOT: {
+    dot(compiler, parser, scanner, canAssign);
+      break;
+  }
   case TOKEN_MINUS: {
     binary(compiler, parser, scanner);
     break;
@@ -797,6 +816,19 @@ static void function(Compiler *current, Parser *parser, Scanner *scanner,
             makeConstant(current, parser, OBJ_VAL(function)));
 }
 
+static void structDeclaration(Compiler *compiler, Parser *parser,
+                              Scanner *scanner) {
+  consume(parser, scanner, TOKEN_IDENTIFIER, "Expect struct name");
+  uint8_t nameConstant = identifierConstant(compiler, parser);
+  declareVariable(compiler, parser);
+
+  emitBytes(compiler, parser, OP_STRUCT, nameConstant);
+  defineVariable(compiler, parser, nameConstant);
+
+  consume(parser, scanner, TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+  consume(parser, scanner, TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+}
+
 static void funDeclaration(Compiler *compiler, Parser *parser,
                            Scanner *scanner) {
   uint8_t global =
@@ -831,6 +863,8 @@ static void declaration(Compiler *compiler, Parser *parser, Scanner *scanner) {
     funDeclaration(compiler, parser, scanner);
   } else if (match(parser, scanner, TOKEN_VAR)) {
     varDeclaration(compiler, parser, scanner);
+  } else if (match(parser, scanner, TOKEN_STRUCT)) {
+    structDeclaration(compiler, parser, scanner);
   } else {
 
     statement(compiler, parser, scanner);

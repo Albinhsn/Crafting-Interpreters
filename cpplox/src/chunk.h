@@ -7,6 +7,7 @@
 typedef enum {
   OP_CONSTANT,
   OP_PRINT,
+  OP_STRUCT,
   OP_JUMP_IF_FALSE,
   OP_JUMP,
   OP_LOOP,
@@ -28,6 +29,8 @@ typedef enum {
   OP_GET_GLOBAL,
   OP_GET_LOCAL,
   OP_SET_LOCAL,
+  OP_SET_PROPERTY,
+  OP_GET_PROPERTY,
   OP_NEGATE,
   OP_RETURN,
 } OpCode;

@@ -13,6 +13,26 @@ ObjFunction *newFunction() {
   vm->objects.push_back((Obj *)function);
   return function;
 }
+
+ObjStruct *newStruct(ObjString *name) {
+  ObjStruct *strukt = new ObjStruct();
+  strukt->name = name;
+  strukt->obj.type = OBJ_STRUCT;
+
+  vm->objects.push_back((Obj *)strukt);
+  return strukt;
+}
+
+ObjInstance *newInstance(ObjStruct *strukt) {
+  ObjInstance *instance = new ObjInstance();
+  instance->strukt = strukt;
+  instance->fields = std::map<std::string, Value>();
+  instance->obj.type= OBJ_INSTANCE;
+
+  vm->objects.push_back((Obj *)instance);
+  return instance;
+}
+
 static void printFunction(ObjFunction *function) {
   if (function->name == NULL) {
     printf("<script>");
@@ -42,6 +62,14 @@ void printObject(Value value) {
   }
   case OBJ_STRING: {
     std::cout << AS_STRING(value)->chars;
+    break;
+  }
+  case OBJ_STRUCT: {
+    std::cout << AS_STRUCT(value)->name->chars << " struct";
+    break;
+  }
+  case OBJ_INSTANCE: {
+    std::cout << AS_INSTANCE(value)->strukt->name->chars << " instance";
     break;
   }
   default: {

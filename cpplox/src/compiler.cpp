@@ -726,7 +726,7 @@ static void infixRule(Compiler *compiler, Parser *parser, Scanner *scanner,
   }
   case TOKEN_DOT: {
     dot(compiler, parser, scanner, canAssign);
-      break;
+    break;
   }
   case TOKEN_MINUS: {
     binary(compiler, parser, scanner);
@@ -889,5 +889,10 @@ Compiler *compile(std::string source) {
 
   freeScanner(scanner);
   freeParser(parser);
+
+  if (hadError) {
+    freeCompiler(compiler);
+  }
+
   return hadError ? NULL : compiler;
 }

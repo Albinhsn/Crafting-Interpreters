@@ -126,8 +126,7 @@ static bool callValue(Value callee, int argCount) {
     }
     case OBJ_STRUCT: {
       ObjStruct *strukt = AS_STRUCT(callee);
-      vm->stack->update(argCount,
-                        OBJ_VAL(newInstance(strukt)));
+      vm->stack->update(argCount, OBJ_VAL(newInstance(strukt)));
       std::cout << vm->stack->length << "\n";
       return true;
     }
@@ -256,7 +255,7 @@ InterpretResult run() {
     }
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(1))) {
-        std::cout << OBJ_TYPE(peek(1)) << "\n"; 
+        std::cout << OBJ_TYPE(peek(1)) << "\n";
         runtimeError(vm, "Only instances have fields.");
         return INTERPRET_RUNTIME_ERROR;
       }

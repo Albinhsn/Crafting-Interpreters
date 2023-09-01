@@ -3,6 +3,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include "memory.h"
 #include "object.h"
 #include "value.h"
 #include <cstdarg>
@@ -30,36 +31,10 @@ void initVM() {
 }
 static CallFrame *currentFrame() { return vm->frames[vm->frames.size() - 1]; }
 
-void freeObjects() {
-  for (int i = 0; i < vm->objects.size(); i++) {
-    if (vm->objects[i] == NULL) {
-      std::cout << "ALREADY FREED\n";
-      continue;
-    }
-    switch (vm->objects[i]->type) {
-    case OBJ_STRING: {
-      ObjString *string = (ObjString *)vm->objects[i];
-      delete (string);
-      break;
-    }
-    case OBJ_NATIVE: {
-      ObjNative *native = (ObjNative *)vm->objects[i];
-      delete (native);
-      break;
-    }
-    case OBJ_FUNCTION: {
-      ObjFunction *fn = (ObjFunction *)vm->objects[i];
-      delete (fn);
-      break;
-    }
-    }
-  }
-}
 
 void freeVM() {
   delete vm->stack;
   vm->frames.clear();
-  // delete(vm)
 }
 
 static void resetStack(VM *vm) {
@@ -342,9 +317,7 @@ InterpretResult run() {
     }
     case OP_RETURN: {
       Value result = vm->stack->pop();
-      int sp = frame->sp;
-      delete (vm->frames.back());
-      vm->frames.pop_back();
+      int sp = freeFrame(vm);
       if (vm->frames.size() == 0) {
         vm->stack->pop();
         return INTERPRET_OK;
@@ -372,8 +345,8 @@ InterpretResult interpret(std::string source) {
   vm->stack->push(OBJ_VAL(function));
   call(function, 0);
 
+  freeCompiler(compiler);
   std::cout << "\n== Running in vm == \n";
   InterpretResult result = run();
-  delete (compiler);
   return result;
 }

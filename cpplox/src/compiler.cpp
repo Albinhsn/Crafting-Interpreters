@@ -2,6 +2,7 @@
 
 #include "compiler.h"
 #include "chunk.h"
+#include "memory.h"
 #include "common.h"
 #include "object.h"
 #include "scanner.h"
@@ -791,7 +792,7 @@ static void function(Compiler *current, Parser *parser, Scanner *scanner,
   block(compiler, parser, scanner);
 
   ObjFunction *function = endCompiler(compiler, parser);
-  delete(compiler);
+  freeCompiler(compiler);
   emitBytes(current, parser, OP_CONSTANT,
             makeConstant(current, parser, OBJ_VAL(function)));
 }
@@ -852,15 +853,7 @@ Compiler *compile(std::string source) {
   bool hadError = parser->hadError;
   endCompiler(compiler, parser);
 
-  if (parser->current) {
-
-    delete (parser->current);
-  }
-  if (parser->previous) {
-    delete (parser->previous);
-  }
-  delete (scanner);
-  delete (parser);
-
+  freeScanner(scanner);
+  freeParser(parser);
   return hadError ? NULL : compiler;
 }

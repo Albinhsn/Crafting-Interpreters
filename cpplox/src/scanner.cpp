@@ -204,9 +204,9 @@ Token *scanToken(Scanner *scanner) {
     // case '?': {
     //   return makeToken(scanner, "?", TOKEN_QUESTION);
     // }
-    // case ':': {
-    //   return makeToken(scanner, ":", TOKEN_COLON);
-    // }
+    case ':': {
+      return makeToken(scanner, ":", TOKEN_COLON);
+    }
   case '!': {
     if (match(scanner, '=')) {
       return makeToken(scanner, "!=", TOKEN_BANG_EQUAL);

@@ -7,6 +7,7 @@
 #include <map>
 
 typedef enum {
+  OBJ_MAP,
   OBJ_INSTANCE,
   OBJ_STRUCT,
   OBJ_STRING,
@@ -51,8 +52,14 @@ typedef struct {
   std::vector<Value> fields;
 } ObjInstance;
 
+typedef struct {
+  Obj obj;
+  std::map<std::string, Value> m;
+} ObjMap;
+
 #define IS_STRUCT(value) isObjType(value, OBJ_STRUCT)
 #define IS_ARRAY(value) isObjType(value, OBJ_ARRAY)
+#define IS_MAP(value) isObjType(value, OBJ_MAP)
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
 #define IS_INSTANCE(value) isObjType(value, OBJ_INSTANCE)
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
@@ -61,6 +68,7 @@ typedef struct {
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 
 #define AS_ARRAY(value) ((ObjArray *)AS_OBJ(value))
+#define AS_MAP(value) ((ObjMap *)AS_OBJ(value))
 #define AS_STRUCT(value) ((ObjStruct *)AS_OBJ(value))
 #define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
 #define AS_INSTANCE(value) ((ObjInstance *)AS_OBJ(value))
@@ -74,7 +82,8 @@ struct ObjString {
 
 void printObject(Value value);
 ObjFunction *newFunction();
-ObjArray * newArray(std::vector<Value>);
+ObjMap *newMap(std::vector<Value>);
+ObjArray *newArray(std::vector<Value>);
 ObjNative *newNative(NativeFn function);
 ObjString *copyString(std::string str);
 ObjStruct *newStruct(ObjString *name);

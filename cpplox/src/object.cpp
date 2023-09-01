@@ -14,6 +14,19 @@ ObjFunction *newFunction() {
   vm->objects.push_back((Obj *)function);
   return function;
 }
+ObjMap *newMap(std::vector<Value> values) {
+  ObjMap *mp = new ObjMap();
+
+  Obj obj;
+  obj.type = OBJ_MAP;
+  mp->obj = obj;
+
+  mp->m = std::map<std::string, Value>();
+  for (int i = 0; i < values.size(); i += 2) {
+    mp->m[AS_STRING(values[i + 1])->chars] = values[i];
+  }
+  return mp;
+}
 
 ObjArray *newArray(std::vector<Value> values) {
   ObjArray *array = new ObjArray();
@@ -86,16 +99,29 @@ void printObject(Value value) {
     std::cout << AS_INSTANCE(value)->name->chars << " instance";
     break;
   }
-  case OBJ_ARRAY:{
-      ObjArray * array = AS_ARRAY(value);
-      std::cout << "[";
-      for(int i = 0; i < array->values.size(); i++){
-        printValue(array->values[i]);
-        std::cout << (i < array->values.size() - 1 ? "," : "");
-      }
-      std::cout << "]";
-      break;
+  case OBJ_ARRAY: {
+    ObjArray *array = AS_ARRAY(value);
+    std::cout << "[";
+    for (int i = 0; i < array->values.size(); i++) {
+      printValue(array->values[i]);
+      std::cout << (i < array->values.size() - 1 ? "," : "");
     }
+    std::cout << "]";
+    break;
+  }
+  case OBJ_MAP: {
+    ObjMap *mp = AS_MAP(value);
+    std::cout << "{";
+    int i = 0;
+    for (const auto &[key, value] : mp->m) {
+      std::cout << "'" << key << "':";
+      printValue(value);
+      std::cout << (i < mp->m.size() - 1 ? "," : "");
+      i++;
+    }
+    std::cout << "}";
+      break;
+  }
   default: {
     std::cout << OBJ_TYPE(value) << " is unknown";
   }

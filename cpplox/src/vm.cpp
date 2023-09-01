@@ -162,6 +162,18 @@ static bool index() {
     return false;
   }
   switch (OBJ_TYPE(item)) {
+  case OBJ_MAP: {
+    ObjMap *mp = AS_MAP(item);
+    ObjString *string = AS_STRING(key);
+
+    if (mp->m.count(string->chars)) {
+      vm->stack->push(mp->m[string->chars]);
+      return true;
+    }
+    runtimeError(vm, "Trying to access map with unknown key %s",
+                 string->chars.c_str());
+    return false;
+  }
   case OBJ_STRING: {
     if (key.type != VAL_NUMBER) {
       runtimeError(vm, "Can only index string with number");
@@ -434,6 +446,17 @@ InterpretResult run() {
       }
       ObjArray *array = newArray(values);
       vm->stack->push(OBJ_VAL(array));
+      break;
+    }
+    case OP_MAP: {
+      int argCount = readByte();
+      std::cout << argCount << "\n";
+      std::vector<Value> values = std::vector<Value>();
+      for (int i = 0; i < argCount; i++) {
+        values.push_back(vm->stack->pop());
+      }
+      ObjMap *map = newMap(values);
+      vm->stack->push(OBJ_VAL(map));
       break;
     }
     case OP_STRUCT: {

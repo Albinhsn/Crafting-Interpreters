@@ -19,7 +19,7 @@ typedef enum {
   TOKEN_SEMICOLON,
   TOKEN_SLASH,
   TOKEN_STAR,
-  // TOKEN_COLON,    // :
+  TOKEN_COLON,    // :
   // TOKEN_QUESTION, // ?
 
   // One or two character tokens.

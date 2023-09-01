@@ -10,6 +10,7 @@ typedef enum {
   OP_STRUCT,
   OP_STRUCT_ARG,
   OP_ARRAY,
+  OP_MAP,
   OP_INDEX,
   OP_JUMP_IF_FALSE,
   OP_JUMP,

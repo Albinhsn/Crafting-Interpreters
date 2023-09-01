@@ -71,6 +71,9 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   case OP_STRUCT: {
     return constantInstruction("OP_STRUCT", chunk, offset);
   }
+  case OP_MAP: {
+    return byteInstruction("OP_MAP", chunk, offset);
+  }
   case OP_ARRAY: {
     return byteInstruction("OP_ARRAY", chunk, offset);
   }

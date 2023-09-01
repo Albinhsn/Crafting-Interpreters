@@ -370,6 +370,32 @@ static void arrayDeclaration(Compiler *compiler, Parser *parser,
   emitBytes(compiler, parser, OP_ARRAY, items);
 }
 
+static void mapDeclaration(Compiler *compiler, Parser *parser,
+                           Scanner *scanner) {
+  uint8_t items = 0;
+  if (!check(parser, TOKEN_RIGHT_BRACE)) {
+
+    do {
+      consume(parser, scanner, TOKEN_STRING, "Expect strings as keys");
+      uint8_t constant = identifierConstant(compiler, parser);
+      emitBytes(compiler, parser, OP_CONSTANT, constant);
+
+      consume(parser, scanner, TOKEN_COLON,
+              "Expect colon between key and value");
+      expression(compiler, parser, scanner);
+
+      if (items == 255) {
+        error(parser, "Can't have more than 255 arguments.");
+      }
+      items += 2;
+
+    } while (match(parser, scanner, TOKEN_COMMA));
+  }
+
+  consume(parser, scanner, TOKEN_RIGHT_BRACE, "Expect '}' after map items.");
+  emitBytes(compiler, parser, OP_MAP, items);
+}
+
 static void varDeclaration(Compiler *compiler, Parser *parser,
                            Scanner *scanner) {
   uint8_t global =
@@ -378,6 +404,8 @@ static void varDeclaration(Compiler *compiler, Parser *parser,
   if (match(parser, scanner, TOKEN_EQUAL)) {
     if (match(parser, scanner, TOKEN_LEFT_BRACKET)) {
       arrayDeclaration(compiler, parser, scanner);
+    } else if (match(parser, scanner, TOKEN_LEFT_BRACE)) {
+      mapDeclaration(compiler, parser, scanner);
     } else {
       expression(compiler, parser, scanner);
     }
@@ -897,10 +925,6 @@ static void statement(Compiler *compiler, Parser *parser, Scanner *scanner) {
     returnStatement(compiler, parser, scanner);
   } else if (match(parser, scanner, TOKEN_WHILE)) {
     whileStatement(compiler, parser, scanner);
-  } else if (match(parser, scanner, TOKEN_LEFT_BRACE)) {
-    beginScope(compiler);
-    block(compiler, parser, scanner);
-    endScope(compiler, parser);
   } else {
     expressionStatement(compiler, parser, scanner);
   }

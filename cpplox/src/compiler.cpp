@@ -176,6 +176,8 @@ static ObjFunction *endCompiler(Compiler *compiler, Parser *parser) {
 
 static Precedence getPrecedence(TokenType type) {
   switch (type) {
+  case TOKEN_LEFT_BRACKET:
+    return PREC_CALL;
   case TOKEN_DOT:
     return PREC_CALL;
   case TOKEN_LEFT_PAREN:
@@ -595,6 +597,12 @@ static void call(Compiler *compiler, Parser *parser, Scanner *scanner) {
   emitBytes(compiler, parser, OP_CALL, argCount);
 }
 
+static void index(Compiler *compiler, Parser *parser, Scanner *scanner) {
+  expression(compiler, parser, scanner);
+  emitByte(compiler, parser, OP_INDEX);
+  consume(parser, scanner, TOKEN_RIGHT_BRACKET, "Expect ']' after indexing");
+}
+
 static void dot(Compiler *compiler, Parser *parser, Scanner *scanner,
                 bool canAssign) {
   consume(parser, scanner, TOKEN_IDENTIFIER, "Expect property name after '.'.");
@@ -731,6 +739,7 @@ static void prefixRule(Compiler *compiler, Parser *parser, Scanner *scanner,
   }
   case TOKEN_IDENTIFIER: {
     variable(compiler, parser, scanner, canAssign);
+    break;
   }
   default: {
     break;
@@ -740,6 +749,10 @@ static void prefixRule(Compiler *compiler, Parser *parser, Scanner *scanner,
 static void infixRule(Compiler *compiler, Parser *parser, Scanner *scanner,
                       TokenType type, bool canAssign) {
   switch (type) {
+  case TOKEN_LEFT_BRACKET: {
+    index(compiler, parser, scanner);
+    break;
+  }
   case TOKEN_LEFT_PAREN: {
     call(compiler, parser, scanner);
     break;

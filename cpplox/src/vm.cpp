@@ -154,6 +154,53 @@ static bool callValue(Value callee, int argCount) {
   return false;
 }
 
+static bool index() {
+  Value key = vm->stack->pop();
+  Value item = vm->stack->pop();
+  if (item.type != VAL_OBJ) {
+    runtimeError(vm, "Can't only index array, map and string");
+    return false;
+  }
+  switch (OBJ_TYPE(item)) {
+  case OBJ_STRING: {
+    if (key.type != VAL_NUMBER) {
+      runtimeError(vm, "Can only index string with number");
+      return false;
+    }
+    ObjString *string = AS_STRING(item);
+    int k = (int)key.as.number;
+    if (string->chars.size() <= k || k < 0) {
+      runtimeError(vm, "Trying to access outside of array %d", k);
+      return false;
+    }
+
+    Value value;
+    value.type = VAL_OBJ;
+    value.as.obj = (Obj *)copyString(string->chars.substr(k, 1));
+    vm->stack->push(value);
+    return true;
+  }
+  case OBJ_ARRAY: {
+    if (key.type != VAL_NUMBER) {
+      runtimeError(vm, "Can only index array with number");
+      return false;
+    }
+    int k = (int)key.as.number;
+    ObjArray *array = AS_ARRAY(item);
+    if (array->values.size() <= k || k < 0) {
+      runtimeError(vm, "Trying to access outside of array %d", k);
+      return false;
+    }
+    vm->stack->push(array->values[k]);
+    return true;
+  }
+  default: {
+    runtimeError(vm, "Can't only index array, map and string");
+    return false;
+  }
+  }
+}
+
 static bool isFalsey(Value value) {
   return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
@@ -363,6 +410,12 @@ InterpretResult run() {
     case OP_LOOP: {
       uint16_t offset = READ_SHORT();
       frame->ip -= offset;
+      break;
+    }
+    case OP_INDEX: {
+      if (!index()) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
       break;
     }
     case OP_CALL: {
